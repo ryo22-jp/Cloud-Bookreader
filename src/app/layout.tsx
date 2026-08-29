@@ -11,6 +11,9 @@ export const metadata: Metadata = {
     statusBarStyle: 'black-translucent',
     title: 'CloudReader',
   },
+  verification: {
+    google: 'jdKTSCWn7-7SvMgYeoYdos0KDWAoiDh5OxkPyLLnByQ',
+  },
 };
 
 export const viewport: Viewport = {
