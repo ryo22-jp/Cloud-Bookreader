@@ -2,77 +2,71 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Cloud BookReader 導入＆操作マニュアル</title>
+  <title>Cloud BookReader 使い方ガイド</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-      line-height: 1.75;
+      line-height: 1.8;
       color: #1f2937;
       max-width: 800px;
       margin: 40px auto;
       padding: 0 20px;
     }
-    h1 { font-size: 26px; border-bottom: 2px solid #2563eb; padding-bottom: 8px; color: #111827; }
-    h2 { font-size: 20px; margin-top: 32px; border-left: 4px solid #2563eb; padding-left: 10px; color: #1f2937; }
-    h3 { font-size: 16px; margin-top: 24px; color: #374151; }
+    h1 { font-size: 24px; border-bottom: 2px solid #2563eb; padding-bottom: 8px; color: #111827; }
+    h2 { font-size: 19px; margin-top: 32px; border-left: 4px solid #2563eb; padding-left: 10px; color: #1f2937; }
+    h3 { font-size: 15px; margin-top: 20px; color: #374151; }
     code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; font-size: 0.9em; color: #c0392b; }
-    pre { background: #f8fafc; border: 1px solid #e2e8f0; padding: 14px; border-radius: 8px; overflow-x: auto; }
     blockquote { border-left: 4px solid #cbd5e1; margin: 0; padding-left: 14px; color: #475569; font-style: italic; }
-    a { color: #2563eb; text-decoration: underline; }
-    table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-    th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
-    th { background: #f1f5f9; }
+    a { color: #2563eb; text-decoration: underline; font-weight: bold; }
+    .btn-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; text-align: center; margin: 20px 0; }
+    .warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 20px 0; }
   </style>
 </head>
 <body>
-  <h1>【完全無料】Googleドライブの自炊本を全デバイスで爆速ストリーミング！「Cloud BookReader」の導入＆操作マニュアル</h1>
+  <h1>【完全無料】Googleドライブの自炊マンガ・書籍を全デバイスで爆速ストリーミング！「Cloud BookReader」の使い方ガイド</h1>
   
-  <p>Googleドライブに保存してある自炊マンガや書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・容量消費ゼロ</strong> で快適に読めるWebリーダーアプリ <strong>「Cloud BookReader」</strong> を公開しました！</p>
-  <p>スマートフォン、タブレット、PCなどあらゆる端末からアクセスでき、<strong>「PCで読んだ続きを、外出先のスマホで1秒で再開」</strong> できます。</p>
+  <p>Googleドライブに保存してある自炊マンガや電子書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・端末の容量消費ゼロ</strong> で快適に読めるWebリーダーサービス <strong>「Cloud BookReader」</strong> を公開しました！</p>
+  <p>スマートフォン、タブレット、PCなどあらゆるデバイスに対応し、<strong>「PCで読んだ続きを、外出先のスマホで1秒で再開」</strong> できます。</p>
+  <p>面倒なアプリのインストールやアカウント登録、API設定などは一切不要。<strong>Googleアカウントでログインして自分の本棚フォルダを選ぶだけ（約10秒）</strong> で、誰でも今すぐ無料で利用できます。</p>
+
+  <div class="btn-box">
+    <p style="margin:0; font-size: 14px; color: #1e40af;">🌐 サービスURL（今すぐ無料で使えます）</p>
+    <p style="margin: 8px 0 0 0; font-size: 18px;"><a href="https://cloud-bookreader.vercel.app" target="_blank">https://cloud-bookreader.vercel.app</a></p>
+  </div>
 
   <h2>📖 Cloud BookReader とは？</h2>
-  <p>従来の電子書籍リーダーアプリのように <strong>「端末に本を丸ごとダウンロードして空き容量を圧迫する」</strong> 必要はもうありません。</p>
+  <p>従来の電子書籍リーダーアプリのように <strong>「何百メガもある本をスマホに丸ごとダウンロードして空き容量を圧迫する」</strong> 必要はもうありません。</p>
 
   <h3>✨ 主な特徴</h3>
   <ul>
-    <li><strong>⚡ ダウンロード待ち0秒（HTTP Range Request ストリーミング）</strong>: 大容量のPDFやZIPマンガでも、今開いているページだけを瞬時に取得。</li>
+    <li><strong>⚡ ダウンロード待ち0秒（HTTP Range Request ストリーミング技術）</strong>: 500MBを超える大容量ファイルでも、今開いているページだけを瞬時に取得。端末容量を消費しません。</li>
     <li><strong>🔄 クラウドしおり・進捗・表紙の完全自動同期</strong>: 読んだページや表紙サムネイルはGoogleドライブの専用隠し領域（<code>appDataFolder</code>）に自動保存。</li>
     <li><strong>📚 幅広いファイル形式に対応</strong>: PDF、ZIP/CBZ（マンガ見開き）、EPUB（縦書き・文字サイズ変更）。</li>
     <li><strong>📱 PWA対応（全画面ネイティブアプリ化）</strong>: ホーム画面に追加するだけで、アドレスバーのない全画面アプリとして起動。</li>
-    <li><strong>🎨 上質な2つの読書空間</strong>: Midnight（木造書斎・ダーク）と Paper（和紙ミニマル・ライト）。</li>
-    <li><strong>🔒 完全無料＆最高峰のプライバシー保護</strong>: あなた専用の無料VercelアカウントとGoogleアカウントのみで動作。</li>
+    <li><strong>🎨 目に優しい2つの読書空間</strong>: Midnight（木造書斎・ダーク）と Paper（和紙ミニマル・ライト）。</li>
+    <li><strong>🛡️ あなたの本棚フォルダ以外には一切アクセスしない安全設計</strong>: Googleの安全規格（<code>drive.file</code>）に準拠。指定フォルダ以外にはシステム上アクセスできません。</li>
   </ul>
 
-  <h2>🚀 5分でできる！自分専用の本棚を作る手順</h2>
+  <h2>⚠️ ご利用時の注意点・デメリット（通信について）</h2>
+  <div class="warning-box">
+    <h3 style="margin-top:0; color:#b45309;">📡 読書中はリアルタイムでデータ通信が発生します（オフライン非対応）</h3>
+    <ul>
+      <li><strong>一般的なリーダーアプリ</strong>: 自宅のWi-Fiで本を丸ごとダウンロードしておけば、外出中は <strong>「完全オフライン（機内モード・通信量ゼロ）」</strong> で読書できます。</li>
+      <li><strong>本アプリ（Cloud BookReader）</strong>: 端末容量を節約し待ち時間をゼロにするため、<strong>「読んでいるページだけを都度ストリーミング取得」</strong> します。そのため、外出先の読書中もページをめくるごとにデータ通信が発生します（電波のない場所では利用できません）。</li>
+    </ul>
+    <h3 style="color:#b45309;">💡 こんな方におすすめ</h3>
+    <ul>
+      <li>⭕ <strong>向いている方</strong>: 「スマホの容量が少なく本をたくさん保存できない」「事前ダウンロードなしで気分に合わせてすぐ読みたい」「PCとスマホで続きをシームレスに読みたい」方。</li>
+      <li>⚠️ <strong>ダウンロード型が向いている方</strong>: 「電波のない地下鉄や飛行機で読みたい」「スマホのパケット（ギガ）を1MBも使いたくない」方。</li>
+    </ul>
+  </div>
 
-  <h3>ステップ1: Google Cloud で無料APIキーを取得する</h3>
+  <h2>🚀 かんたん3ステップ！使い方ガイド（所要時間：10秒）</h2>
   <ol>
-    <li><a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> にアクセスし、Googleアカウントでログインします。</li>
-    <li>「新しいプロジェクト」を作成します。</li>
-    <li>「APIとサービス」→「ライブラリ」から <code>Google Drive API</code> を有効にします。</li>
-    <li>「OAuth 同意画面」でユーザータイプ「外部」を選択し、スコープ（<code>.../auth/drive.readonly</code> と <code>.../auth/drive.appdata</code>）を追加。テストユーザーにご自身のGmailを追加します。</li>
-    <li>「認証情報」→「認証情報を作成」→「OAuth クライアント ID」（ウェブ アプリケーション）を作成し、<strong>クライアント ID</strong> と <strong>クライアント シークレット</strong> をメモします。</li>
+    <li><strong>サイトにアクセスしてログイン</strong>: <a href="https://cloud-bookreader.vercel.app" target="_blank">https://cloud-bookreader.vercel.app</a> を開き、「Googleアカウントでログイン」を押します。</li>
+    <li><strong>本棚にするフォルダを選択</strong>: 「Googleドライブから本棚フォルダを選択」を押し、自分の「マンガ」や「自炊本」フォルダを選んで「選択」を押します。</li>
+    <li><strong>読書スタート！</strong>: フォルダ内の本が一覧表示され、読みたい本をタップすればすぐに読書が始まります。</li>
   </ol>
-
-  <h3>ステップ2: Vercel にワンクリックデプロイ（完全無料）</h3>
-  <p>以下のボタンをクリックしてVercelにログインし、環境変数を入力してデプロイします：</p>
-  <p>
-    <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fryo22-jp%2FCloud-Bookreader&env=GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXTAUTH_SECRET&envDescription=Google%20Cloud%20Console%E3%81%A7%E5%8F%96%E5%BE%97%E3%81%97%E3%81%9F%E3%82%AF%E3%83%A9%E3%82%A4%E3%82%A0%E3%83%B3%E3%83%88ID%E3%80%81%E3%82%B7%E3%83%BC%E3%82%AF%E3%83%AC%E3%83%83%E3%83%88%E3%80%81%E4%BB%BB%E6%84%8F%E3%81%AE%E3%83%A9%E3%83%B3%E3%83%80%E3%83%A0%E6%96%87%E5%AD%97%E5%88%97(NEXTAUTH_SECRET)%E3%82%92%E5%85%A5%E5%8A%9B%E3%81%97%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84%E3%80%82" target="_blank">
-      <img src="https://vercel.com/button" alt="Deploy with Vercel">
-    </a>
-  </p>
-  <ul>
-    <li><code>GOOGLE_CLIENT_ID</code>: ステップ1で取得したクライアントID</li>
-    <li><code>GOOGLE_CLIENT_SECRET</code>: ステップ1で取得したクライアントシークレット</li>
-    <li><code>NEXTAUTH_SECRET</code>: 適当なランダム文字列</li>
-  </ul>
-
-  <h3>ステップ3: Google Cloud に本番URLを登録（仕上げ）</h3>
-  <p>発行されたVercelのURLを、Google Cloud Console の OAuth クライアント設定に追加します：</p>
-  <ul>
-    <li><strong>承認済みの JavaScript 生成元</strong>: <code>https://あなたのアプリ名.vercel.app</code></li>
-    <li><strong>承認済みのリダイレクト URI</strong>: <code>https://あなたのアプリ名.vercel.app/api/auth/callback/google</code></li>
-  </ul>
 
   <h2>📱 スマホ・タブレットでアプリ化する（PWA設定）</h2>
   <ul>
@@ -82,19 +76,19 @@
 
   <h2>💡 便利な機能と操作マニュアル</h2>
   <ul>
-    <li><strong>本棚トップの固定</strong>: いつも本を入れているフォルダを開いて「このフォルダを本棚トップにする」を押すと、次回から直接開きます。</li>
     <li><strong>直前フォルダへの自動復帰</strong>: 本を読み終えて戻るを押すと、直前の巻があるフォルダへ瞬時に戻ります。</li>
-    <li><strong>続きから読むの整理</strong>: 直近5件の履歴が表示され、不要な履歴は「×ボタン」でいつでも削除可能です。</li>
+    <li><strong>続きから読むの整理</strong>: 直近5件の履歴が表示され、不要な履歴は「×ボタン」でいつでも整理可能です。</li>
+    <li><strong>本棚フォルダの切り替え</strong>: 上部の「📁 本棚フォルダ変更」ボタンから、いつでも別のフォルダに変更できます。</li>
   </ul>
 
   <h2>❓ よくある質問（FAQ）</h2>
   <blockquote>
-    <p><strong>Q. Googleログイン時に「このアプリは確認されていません」と表示されます</strong><br>
-    自作アプリのため表示されます。画面左下の「詳細」→「（安全ではないページ）に移動」を押してログインしてください。</p>
+    <p><strong>Q. 完全無料で利用できますか？</strong><br>
+    はい、完全無料です。利用料金や課金は一切発生しません。</p>
   </blockquote>
   <blockquote>
-    <p><strong>Q. 完全無料でずっと使えますか？</strong><br>
-    はい。Google API と Vercel の無料枠内で運用できるため、費用は一切かかりません。</p>
+    <p><strong>Q. Googleドライブ内のプライベートなファイルを見られる心配はありませんか？</strong><br>
+    一切ありません。あなたが選択した本棚フォルダ以外のデータ（写真や書類など）には、アプリ側から一切アクセスできないGoogleの安全設計になっています。</p>
   </blockquote>
 </body>
 </html>
