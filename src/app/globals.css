@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Midnight (木造書斎テーマ - デフォルト) */
+:root, [data-theme="midnight"] {
+  --bg-primary: #171513;
+  --bg-secondary: #221e1b;
+  --bg-card: #2a2521;
+  --bg-hover: #352f2a;
+  --border-color: #3f3731;
+  --text-primary: #f5efe6;
+  --text-secondary: #c4b9aa;
+  --text-muted: #8c8071;
+  --accent: #f59e0b;
+  --accent-light: #fbbf24;
+  --accent-bg: rgba(245, 158, 11, 0.12);
+  --accent-border: rgba(245, 158, 11, 0.3);
+}
+
+/* Paper (和紙ミニマルテーマ) */
+[data-theme="paper"] {
+  --bg-primary: #f4f4f0;
+  --bg-secondary: #e9e9e2;
+  --bg-card: #ffffff;
+  --bg-hover: #deded4;
+  --border-color: #dcdbd3;
+  --text-primary: #282b28;
+  --text-secondary: #585c58;
+  --text-muted: #888d88;
+  --accent: #5e735c;
+  --accent-light: #758c73;
+  --accent-bg: rgba(94, 115, 92, 0.12);
+  --accent-border: rgba(94, 115, 92, 0.3);
+}
+
+body {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", "BIZ UDPGothic", "Meiryo", sans-serif;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* スクロールバー */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
