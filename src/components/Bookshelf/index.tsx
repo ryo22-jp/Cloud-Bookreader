@@ -13,6 +13,8 @@ import {
   Pin,
   X,
   FileText,
+  FolderSearch,
+  PlusCircle,
 } from 'lucide-react';
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 import { FileCard } from './FileCard';
@@ -24,6 +26,7 @@ import {
   saveCoverImage,
   deleteLocalProgress,
 } from '@/lib/storage';
+import { openFolderPicker } from '@/lib/picker';
 
 interface FolderBreadcrumb {
   id: string;
@@ -47,6 +50,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const [currentFolderId, setCurrentFolderId] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPickerOpening, setIsPickerOpening] = useState<boolean>(false);
 
   // 進捗データ & 表紙キャッシュ
   const [progressMap, setProgressMap] = useState<Record<string, BookProgress>>({});
@@ -188,6 +192,41 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
     fetchData();
   }, [fetchData, refreshTrigger]);
 
+  // Google Picker でフォルダを選択する
+  const handleOpenPicker = async () => {
+    if (!session?.accessToken) return;
+    setIsPickerOpening(true);
+
+    try {
+      const selected = await openFolderPicker(session.accessToken);
+      if (selected) {
+        const newConfig: AppConfig = {
+          rootFolderId: selected.id,
+          rootFolderName: selected.name,
+        };
+
+        setAppConfig(newConfig);
+        await saveLocalAppConfig(newConfig);
+
+        fetch('/api/drive/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newConfig),
+        }).catch(console.error);
+
+        setCurrentFolderId(selected.id);
+        const initialCrumbs = [{ id: selected.id, name: selected.name }];
+        setBreadcrumbs(initialCrumbs);
+        sessionStorage.setItem(LAST_FOLDER_ID_KEY, selected.id);
+        sessionStorage.setItem(LAST_BREADCRUMBS_KEY, JSON.stringify(initialCrumbs));
+      }
+    } catch (err) {
+      console.error('Picker open failed:', err);
+    } finally {
+      setIsPickerOpening(false);
+    }
+  };
+
   // フォルダクリック
   const handleFolderClick = (folderId: string, folderName: string) => {
     const nextCrumbs = [...breadcrumbs, { id: folderId, name: folderName }];
@@ -310,7 +349,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
         </div>
       ) : (
         <>
-          {/* 上部: ナビゲーション & ルートフォルダ固定コントロール */}
+          {/* 上部: ナビゲーション & 本棚フォルダ選択・固定コントロール */}
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-[var(--border-color)] pb-4">
             {/* パンくずリスト */}
             <nav className="flex items-center space-x-1.5 overflow-x-auto text-sm text-[var(--text-secondary)] no-scrollbar py-1">
@@ -339,8 +378,19 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
               })}
             </nav>
 
-            {/* 本棚固定 / 解除ボタン */}
+            {/* 本棚フォルダ選択（Google Picker） & 固定コントロール */}
             <div className="flex items-center space-x-2">
+              {/* Google公式のフォルダ選択ダイアログを開くボタン */}
+              <button
+                onClick={handleOpenPicker}
+                disabled={isPickerOpening}
+                className="flex items-center space-x-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm disabled:opacity-50"
+                title="Googleドライブから本棚にするフォルダを直接選択"
+              >
+                <FolderSearch className="h-3.5 w-3.5 text-[var(--accent)]" />
+                <span>{appConfig.rootFolderId ? '本棚フォルダ変更' : '本棚フォルダ選択'}</span>
+              </button>
+
               {appConfig.rootFolderId ? (
                 <button
                   onClick={handleUnpinFolder}
@@ -348,7 +398,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
                   title="クリックしてGoogleドライブ全体の表示に戻す"
                 >
                   <Pin className="h-3.5 w-3.5 fill-[var(--accent)]" />
-                  <span>本棚トップ固定中（解除）</span>
+                  <span>固定解除</span>
                 </button>
               ) : currentFolderId !== 'root' && currentFolderId !== '' ? (
                 <button
@@ -357,7 +407,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
                   title="このフォルダを本棚のトップとして記憶する"
                 >
                   <Pin className="h-3.5 w-3.5" />
-                  <span>このフォルダを本棚トップにする</span>
+                  <span>このフォルダを固定</span>
                 </button>
               ) : null}
             </div>
@@ -482,15 +532,23 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
           <p className="text-xs text-[var(--text-muted)]">本棚を読み込み中...</p>
         </div>
       ) : sortedBookFiles.length === 0 && folderFiles.length === 0 ? (
-        /* 空状態 */
-        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-card)]/50 py-16 text-center">
-          <FolderOpen className="h-12 w-12 text-[var(--text-muted)] mb-3 opacity-60" />
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-            書籍やフォルダが見つかりませんでした
+        /* 空状態（本棚フォルダ選択へのスマートな誘導） */
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-card)]/50 py-16 px-4 text-center">
+          <FolderOpen className="h-12 w-12 text-[var(--accent)] mb-3 opacity-80" />
+          <h3 className="text-base font-bold text-[var(--text-primary)]">
+            本棚にするフォルダを選択してください
           </h3>
-          <p className="mt-1 text-xs text-[var(--text-muted)] max-w-sm">
-            このフォルダには対象の電子書籍（PDF, ZIP, CBZ, EPUB）がありません。
+          <p className="mt-1.5 text-xs text-[var(--text-muted)] max-w-sm leading-relaxed">
+            Googleドライブ内のマンガや自炊書籍が入ったフォルダを選択すると、本棚に本が並びます。
           </p>
+          <button
+            onClick={handleOpenPicker}
+            disabled={isPickerOpening}
+            className="mt-5 flex items-center space-x-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[var(--accent)]/20 hover:opacity-90 transition"
+          >
+            <FolderSearch className="h-4 w-4" />
+            <span>Googleドライブから本棚フォルダを選択</span>
+          </button>
         </div>
       ) : (
         /* 書籍一覧（リスト表示） */
