@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
 import { Header } from '@/components/Header';
 import { Bookshelf } from '@/components/Bookshelf';
@@ -68,6 +69,29 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {/* フッター */}
+      <footer className="border-t border-[var(--border-color)] py-6 px-4 text-center text-xs text-[var(--text-muted)]">
+        <div className="flex items-center justify-center space-x-4 mb-2">
+          <Link href="/privacy" className="hover:text-[var(--text-primary)] transition">
+            プライバシーポリシー
+          </Link>
+          <span>•</span>
+          <Link href="/terms" className="hover:text-[var(--text-primary)] transition">
+            利用規約
+          </Link>
+          <span>•</span>
+          <a
+            href="https://github.com/ryo22-jp/Cloud-Bookreader"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-[var(--text-primary)] transition"
+          >
+            GitHub
+          </a>
+        </div>
+        <p>© 2026 Cloud BookReader. All rights reserved.</p>
+      </footer>
     </div>
   );
 }
