@@ -269,7 +269,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
           }
         }
 
-        const fullBlob = new Blob(chunks);
+        const fullBlob = new Blob(chunks as any);
         const res = await saveOfflineBook(
           {
             fileId: file.id,
