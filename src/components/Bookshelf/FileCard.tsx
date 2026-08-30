@@ -9,6 +9,10 @@ import {
   BookOpen,
   CheckCircle2,
   Bookmark,
+  Download,
+  Trash2,
+  Loader2,
+  HardDriveDownload,
 } from 'lucide-react';
 import { DriveFile, BookProgress } from '@/types';
 
@@ -17,6 +21,10 @@ interface FileCardProps {
   progress?: BookProgress;
   coverUrl?: string;
   viewMode?: 'grid' | 'list';
+  isDownloaded?: boolean;
+  downloadProgress?: number | null; // null: なし, 0-100: 進捗率
+  onDownload?: (file: DriveFile, coverUrl?: string) => void;
+  onDeleteDownload?: (fileId: string) => void;
   onFolderClick?: (folderId: string, folderName: string) => void;
 }
 
@@ -43,11 +51,16 @@ export function FileCard({
   progress,
   coverUrl,
   viewMode = 'list',
+  isDownloaded = false,
+  downloadProgress = null,
+  onDownload,
+  onDeleteDownload,
   onFolderClick,
 }: FileCardProps) {
   const isCompleted = progress && progress.percentage >= 98;
   const isReading = progress && progress.percentage > 0 && !isCompleted;
   const volNum = extractVolNumber(file.name);
+  const isDownloading = downloadProgress !== null;
 
   // ファイル種別に応じたバッジ
   const renderBadge = () => {
@@ -101,69 +114,76 @@ export function FileCard({
             : 'from-amber-950/40 via-[var(--bg-secondary)] to-[var(--bg-card)]'
         } ${size === 'md' ? 'h-20 w-14' : 'h-16 w-11 sm:w-12'}`}
       >
-        <div className="flex h-5 w-5 items-center justify-center rounded bg-[var(--bg-primary)]/60 mt-0.5">
-          {file.fileType === 'pdf' ? (
-            <FileText className="h-3.5 w-3.5 text-rose-500" />
-          ) : file.fileType === 'epub' ? (
-            <BookOpen className="h-3.5 w-3.5 text-emerald-500" />
-          ) : (
-            <Archive className="h-3.5 w-3.5 text-amber-500" />
-          )}
-        </div>
+        <span className="text-[9px] font-black uppercase tracking-wider text-[var(--text-muted)] opacity-60">
+          {file.fileType}
+        </span>
         {volNum ? (
-          <span className="text-[11px] font-black text-[var(--text-secondary)] tracking-tight">
-            #{volNum}
-          </span>
+          <div className="flex flex-col items-center">
+            <span className="text-[7px] text-[var(--text-muted)] leading-none">VOL</span>
+            <span className="text-xs font-extrabold text-[var(--accent)] font-mono leading-tight">
+              {volNum}
+            </span>
+          </div>
         ) : (
-          <span className="text-[9px] font-bold text-[var(--text-muted)] uppercase">
-            {file.fileType}
-          </span>
+          <BookOpen className="h-3.5 w-3.5 text-[var(--text-muted)] opacity-50" />
         )}
+        <div className="h-1 w-4 rounded-full bg-[var(--border-color)]" />
       </div>
     );
   };
 
-  // フォルダの場合（温かみのある木製フォルダ風）
+  // フォルダの場合
   if (file.isFolder) {
     return (
-      <div
-        onClick={() => onFolderClick?.(file.id, file.name)}
-        className="flex cursor-pointer items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3 hover:border-[var(--accent)] hover:bg-[var(--bg-hover)] transition-all group shadow-sm"
+      <button
+        onClick={() => onFolderClick && onFolderClick(file.id, file.name)}
+        className="flex w-full items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3 text-left hover:border-[var(--accent)] hover:bg-[var(--bg-hover)] transition-all group shadow-sm"
       >
         <div className="flex items-center space-x-3 truncate">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-bg)] text-[var(--accent)] group-hover:scale-105 transition shadow-inner">
-            <Folder className="h-6 w-6 fill-[var(--accent)]/20 text-[var(--accent)]" />
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-bg)] text-[var(--accent)] group-hover:scale-105 transition-transform">
+            <Folder className="h-5 w-5 fill-current" />
           </div>
-          <div className="truncate">
-            <span className="truncate block text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition">
-              {file.name}
-            </span>
-            <span className="text-[11px] text-[var(--text-muted)]">フォルダ</span>
-          </div>
+          <span className="truncate text-sm font-medium text-[var(--text-primary)] group-hover:text-[var(--accent)] transition">
+            {file.name}
+          </span>
         </div>
-      </div>
+      </button>
     );
   }
 
-  // 書籍ファイルの場合
+  // 読書ページへのURL
   const readUrl = `/read/${file.id}?name=${encodeURIComponent(file.name)}`;
+
+  // オフラインダウンロードボタン操作
+  const handleDownloadClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isDownloaded) {
+      if (onDeleteDownload) onDeleteDownload(file.id);
+    } else {
+      if (onDownload) onDownload(file, coverUrl);
+    }
+  };
 
   // リスト表示（デフォルト）
   if (viewMode === 'list') {
     return (
-      <Link
-        href={readUrl}
-        className="flex items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-2.5 sm:p-3 hover:border-[var(--accent)] hover:bg-[var(--bg-hover)] transition-all group shadow-sm"
-      >
-        {/* 左側: ミニ表紙 ＋ タイトル ＋ 詳細情報 */}
-        <div className="flex items-center space-x-3.5 truncate mr-3">
+      <div className="group relative flex items-center justify-between rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-2.5 sm:p-3 hover:border-[var(--accent)] hover:bg-[var(--bg-hover)] transition-all shadow-sm">
+        {/* クリック全体リンク */}
+        <Link href={readUrl} className="flex items-center space-x-3.5 truncate flex-1 mr-2">
           {renderCover('sm')}
-          <div className="truncate">
+          <div className="truncate min-w-0">
             <div className="flex items-center space-x-2">
               <span className="truncate text-sm font-semibold text-[var(--text-primary)] group-hover:text-[var(--accent)] transition">
                 {file.name}
               </span>
               {renderBadge()}
+              {isDownloaded && (
+                <span className="inline-flex items-center space-x-0.5 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <HardDriveDownload className="h-3 w-3" />
+                  <span>保存済</span>
+                </span>
+              )}
             </div>
             <div className="flex items-center space-x-3 text-xs text-[var(--text-muted)] mt-1">
               {file.size && <span>{formatBytes(file.size)}</span>}
@@ -177,21 +197,21 @@ export function FileCard({
               )}
             </div>
           </div>
-        </div>
+        </Link>
 
-        {/* 右側: 進捗バーまたは読了バッジ */}
-        <div className="flex items-center space-x-3 shrink-0">
+        {/* 右側: 進捗バー ＋ オフラインダウンロードボタン */}
+        <div className="flex items-center space-x-2 shrink-0">
           {isCompleted ? (
             <div className="flex items-center space-x-1 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              <span>読了</span>
+              <span className="hidden sm:inline">読了</span>
             </div>
           ) : isReading ? (
-            <div className="flex flex-col items-end space-y-1">
+            <div className="flex flex-col items-end space-y-1 mr-1">
               <span className="text-xs font-bold text-[var(--accent)]">
                 {Math.round(progress!.percentage)}%
               </span>
-              <div className="h-1.5 w-16 sm:w-24 overflow-hidden rounded-full bg-[var(--border-color)]">
+              <div className="h-1.5 w-12 sm:w-20 overflow-hidden rounded-full bg-[var(--border-color)]">
                 <div
                   className="h-full rounded-full bg-[var(--accent)]"
                   style={{ width: `${Math.min(100, progress!.percentage)}%` }}
@@ -199,8 +219,40 @@ export function FileCard({
               </div>
             </div>
           ) : null}
+
+          {/* オフライン保存 / 削除ボタン */}
+          {onDownload && (
+            <button
+              onClick={handleDownloadClick}
+              disabled={isDownloading}
+              title={
+                isDownloading
+                  ? `ダウンロード中 (${downloadProgress}%)`
+                  : isDownloaded
+                  ? 'オフライン保存済み（クリックで削除）'
+                  : '端末にオフライン保存（Wi-Fi推奨・最大5冊）'
+              }
+              className={`flex h-8 w-8 items-center justify-center rounded-xl transition ${
+                isDownloading
+                  ? 'bg-[var(--accent-bg)] text-[var(--accent)]'
+                  : isDownloaded
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-rose-500/10 hover:text-rose-500 border border-emerald-500/20'
+                  : 'text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--accent)] border border-transparent hover:border-[var(--border-color)]'
+              }`}
+            >
+              {isDownloading ? (
+                <div className="flex flex-col items-center">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                </div>
+              ) : isDownloaded ? (
+                <HardDriveDownload className="h-4 w-4" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+            </button>
+          )}
         </div>
-      </Link>
+      </div>
     );
   }
 
@@ -214,7 +266,14 @@ export function FileCard({
         {renderCover('md')}
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between mb-1">
-            {renderBadge()}
+            <div className="flex items-center space-x-1.5">
+              {renderBadge()}
+              {isDownloaded && (
+                <span className="rounded-md bg-emerald-500/10 px-1 py-0.5 text-[9px] font-bold text-emerald-500">
+                  保存済
+                </span>
+              )}
+            </div>
             {isCompleted && (
               <span className="flex items-center space-x-0.5 text-[10px] font-bold text-emerald-500">
                 <CheckCircle2 className="h-3 w-3" />

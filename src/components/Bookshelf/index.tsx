@@ -14,7 +14,8 @@ import {
   X,
   FileText,
   FolderSearch,
-  PlusCircle,
+  HardDriveDownload,
+  Trash2,
 } from 'lucide-react';
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 import { FileCard } from './FileCard';
@@ -25,6 +26,11 @@ import {
   getAllCoverImages,
   saveCoverImage,
   deleteLocalProgress,
+  saveOfflineBook,
+  deleteOfflineBook,
+  getAllOfflineBookMetas,
+  OfflineBookMeta,
+  MAX_OFFLINE_BOOKS,
 } from '@/lib/storage';
 import { openFolderPicker } from '@/lib/picker';
 
@@ -42,6 +48,15 @@ const MAX_RECENT_BOOKS = 5; // 続きから読むの最大表示件数
 const LAST_FOLDER_ID_KEY = 'cloud_reader_last_folder_id';
 const LAST_BREADCRUMBS_KEY = 'cloud_reader_last_breadcrumbs';
 
+function formatBytes(bytes?: number, decimals = 1) {
+  if (!bytes || bytes === 0) return '0 B';
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
 export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const { data: session } = useSession();
   const [files, setFiles] = useState<DriveFile[]>([]);
@@ -56,8 +71,21 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const [progressMap, setProgressMap] = useState<Record<string, BookProgress>>({});
   const [coverMap, setCoverMap] = useState<Record<string, string>>({});
 
+  // オフラインダウンロード管理
+  const [offlineMetas, setOfflineMetas] = useState<OfflineBookMeta[]>([]);
+  const [downloadedSet, setDownloadedSet] = useState<Set<string>>(new Set());
+  const [downloadingMap, setDownloadingMap] = useState<Record<string, number>>({});
+  const [showOfflineList, setShowOfflineList] = useState<boolean>(false);
+
   // ソート
   const [sortBy, setSortBy] = useState<'name' | 'time' | 'progress'>('name');
+
+  // オフライン書籍一覧の再取得
+  const refreshOfflineBooks = useCallback(async () => {
+    const metas = await getAllOfflineBookMetas();
+    setOfflineMetas(metas);
+    setDownloadedSet(new Set(metas.map((m) => m.fileId)));
+  }, []);
 
   // 初期設定（保存されたルートフォルダ設定や直前のフォルダ階層）の読み込み
   useEffect(() => {
@@ -78,6 +106,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       }
 
       setAppConfig(cfg);
+      await refreshOfflineBooks();
 
       // 直前に開いていたフォルダ階層がsessionStorageにあれば復元
       const savedFolderId = sessionStorage.getItem(LAST_FOLDER_ID_KEY);
@@ -113,7 +142,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
     if (session) {
       initConfig();
     }
-  }, [session]);
+  }, [session, refreshOfflineBooks]);
 
   // ファイル一覧および進捗・表紙の取得
   const fetchData = useCallback(async () => {
@@ -191,6 +220,91 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   useEffect(() => {
     fetchData();
   }, [fetchData, refreshTrigger]);
+
+  // オフラインダウンロードハンドラー
+  const handleDownloadBook = async (file: DriveFile, coverUrl?: string) => {
+    if (downloadingMap[file.id] !== undefined) return;
+
+    if (offlineMetas.length >= MAX_OFFLINE_BOOKS && !downloadedSet.has(file.id)) {
+      alert(
+        `オフライン保存の上限（最大${MAX_OFFLINE_BOOKS}冊）に達しています。不要な本を削除してください。`
+      );
+      return;
+    }
+
+    setDownloadingMap((prev) => ({ ...prev, [file.id]: 0 }));
+
+    try {
+      const response = await fetch(`/api/drive/stream/${file.id}`);
+      if (!response.ok) throw new Error('ダウンロードに失敗しました');
+
+      const contentLength = +(response.headers.get('Content-Length') || 0);
+      const reader = response.body?.getReader();
+
+      if (!reader) {
+        const blob = await response.blob();
+        await saveOfflineBook(
+          {
+            fileId: file.id,
+            fileName: file.name,
+            fileType: file.fileType as any,
+            size: file.size || blob.size,
+            downloadedAt: new Date().toISOString(),
+            coverUrl: coverUrl || coverMap[file.id],
+          },
+          blob
+        );
+      } else {
+        let receivedLength = 0;
+        const chunks: Uint8Array[] = [];
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          chunks.push(value);
+          receivedLength += value.length;
+          if (contentLength > 0) {
+            const percent = Math.min(99, Math.round((receivedLength / contentLength) * 100));
+            setDownloadingMap((prev) => ({ ...prev, [file.id]: percent }));
+          }
+        }
+
+        const fullBlob = new Blob(chunks);
+        const res = await saveOfflineBook(
+          {
+            fileId: file.id,
+            fileName: file.name,
+            fileType: file.fileType as any,
+            size: file.size || fullBlob.size,
+            downloadedAt: new Date().toISOString(),
+            coverUrl: coverUrl || coverMap[file.id],
+          },
+          fullBlob
+        );
+
+        if (!res.success) {
+          alert(res.error || '保存に失敗しました');
+        }
+      }
+
+      await refreshOfflineBooks();
+    } catch (err: any) {
+      console.error('Download error:', err);
+      alert(err.message || 'ダウンロード中にエラーが発生しました');
+    } finally {
+      setDownloadingMap((prev) => {
+        const next = { ...prev };
+        delete next[file.id];
+        return next;
+      });
+    }
+  };
+
+  // オフライン書籍の削除
+  const handleDeleteDownload = async (fileId: string) => {
+    await deleteOfflineBook(fileId);
+    await refreshOfflineBooks();
+  };
 
   // Google Picker でフォルダを選択する
   const handleOpenPicker = async () => {
@@ -335,8 +449,62 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const isCurrentFolderPinned =
     appConfig.rootFolderId && currentFolderId === appConfig.rootFolderId;
 
+  // オフライン合計使用容量
+  const totalOfflineBytes = offlineMetas.reduce((acc, cur) => acc + (cur.size || 0), 0);
+
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+      {/* オフライン保存ステータスバー */}
+      {offlineMetas.length > 0 && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-xs">
+          <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-semibold">
+            <HardDriveDownload className="h-4 w-4" />
+            <span>
+              オフライン保存済み: {offlineMetas.length} / {MAX_OFFLINE_BOOKS}冊 ({formatBytes(totalOfflineBytes)})
+            </span>
+          </div>
+          <button
+            onClick={() => setShowOfflineList(!showOfflineList)}
+            className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 underline hover:opacity-80 transition"
+          >
+            {showOfflineList ? '保存リストを閉じる' : '保存リストを見る'}
+          </button>
+        </div>
+      )}
+
+      {/* オフライン保存リスト（展開時） */}
+      {showOfflineList && offlineMetas.length > 0 && (
+        <div className="mb-6 space-y-2 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-4 shadow-sm">
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color)] text-xs text-[var(--text-muted)] font-bold">
+            <span>端末保存中の本（通信なしで読めます）</span>
+            <span>{offlineMetas.length}冊</span>
+          </div>
+          <div className="space-y-2">
+            {offlineMetas.map((meta) => {
+              const pseudoFile: DriveFile = {
+                id: meta.fileId,
+                name: meta.fileName,
+                mimeType: meta.fileType === 'pdf' ? 'application/pdf' : 'application/zip',
+                size: meta.size,
+                isFolder: false,
+                fileType: meta.fileType,
+              };
+              return (
+                <FileCard
+                  key={meta.fileId}
+                  file={pseudoFile}
+                  progress={progressMap[meta.fileId]}
+                  coverUrl={meta.coverUrl || coverMap[meta.fileId]}
+                  isDownloaded={true}
+                  onDeleteDownload={handleDeleteDownload}
+                  viewMode="list"
+                />
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* 検索中の場合は検索ヘッダー */}
       {searchQuery ? (
         <div className="mb-6 flex items-center justify-between">
@@ -380,7 +548,6 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
 
             {/* 本棚フォルダ選択（Google Picker） & 固定コントロール */}
             <div className="flex items-center space-x-2">
-              {/* Google公式のフォルダ選択ダイアログを開くボタン */}
               <button
                 onClick={handleOpenPicker}
                 disabled={isPickerOpening}
@@ -448,13 +615,17 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
                           file={pseudoFile}
                           progress={p}
                           coverUrl={coverMap[p.fileId] || p.coverUrl}
+                          isDownloaded={downloadedSet.has(p.fileId)}
+                          downloadProgress={downloadingMap[p.fileId]}
+                          onDownload={handleDownloadBook}
+                          onDeleteDownload={handleDeleteDownload}
                           viewMode="list"
                         />
                         {/* 履歴削除ボタン */}
                         <button
                           onClick={(e) => handleDeleteProgress(p.fileId, e)}
                           title="履歴から削除"
-                          className="absolute right-3 top-3 p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-[var(--bg-hover)] rounded-xl opacity-0 group-hover/item:opacity-100 transition z-10"
+                          className="absolute right-12 top-3 p-1.5 text-[var(--text-muted)] hover:text-rose-500 hover:bg-[var(--bg-hover)] rounded-xl opacity-0 group-hover/item:opacity-100 transition z-10"
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -559,6 +730,10 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
               file={file}
               progress={progressMap[file.id]}
               coverUrl={coverMap[file.id]}
+              isDownloaded={downloadedSet.has(file.id)}
+              downloadProgress={downloadingMap[file.id]}
+              onDownload={handleDownloadBook}
+              onDeleteDownload={handleDeleteDownload}
               viewMode="list"
             />
           ))}

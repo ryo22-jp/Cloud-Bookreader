@@ -155,3 +155,116 @@ export async function getLocalAppConfig(): Promise<AppConfig> {
     return {};
   }
 }
+
+// ----------------------------------------------------
+// オフライン書籍管理 (最大5冊まで端末内キャッシュ)
+// ----------------------------------------------------
+export const MAX_OFFLINE_BOOKS = 5;
+const OFFLINE_PREFIX = 'offline_book_';
+
+export interface OfflineBookMeta {
+  fileId: string;
+  fileName: string;
+  fileType: 'pdf' | 'zip' | 'cbz' | 'epub';
+  size: number;
+  downloadedAt: string;
+  coverUrl?: string;
+}
+
+/**
+ * オフライン書籍の保存（Blobデータ ＋ メタ情報）
+ */
+export async function saveOfflineBook(
+  meta: OfflineBookMeta,
+  blob: Blob
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const currentBooks = await getAllOfflineBookMetas();
+    // 既存の同ファイルでなければ上限チェック
+    const isExisting = currentBooks.some((b) => b.fileId === meta.fileId);
+    if (!isExisting && currentBooks.length >= MAX_OFFLINE_BOOKS) {
+      return {
+        success: false,
+        error: `ダウンロード上限（最大${MAX_OFFLINE_BOOKS}冊）に達しています。不要な本を削除してください。`,
+      };
+    }
+
+    await set(`${OFFLINE_PREFIX}${meta.fileId}`, {
+      ...meta,
+      blob,
+    });
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Failed to save offline book:', err);
+    return { success: false, error: err.message || '保存に失敗しました' };
+  }
+}
+
+/**
+ * 指定ファイルのオフラインBlobデータを取得
+ */
+export async function getOfflineBookBlob(fileId: string): Promise<Blob | null> {
+  try {
+    const data = await get<{ blob: Blob }>(`${OFFLINE_PREFIX}${fileId}`);
+    return data?.blob || null;
+  } catch (err) {
+    console.error('Failed to get offline book blob:', err);
+    return null;
+  }
+}
+
+/**
+ * オフライン書籍の削除
+ */
+export async function deleteOfflineBook(fileId: string): Promise<void> {
+  try {
+    await del(`${OFFLINE_PREFIX}${fileId}`);
+  } catch (err) {
+    console.error('Failed to delete offline book:', err);
+  }
+}
+
+/**
+ * すべてのオフライン保存済み書籍のメタ情報を取得（一覧表示・容量計算用）
+ */
+export async function getAllOfflineBookMetas(): Promise<OfflineBookMeta[]> {
+  try {
+    const allKeys = await keys();
+    const books: OfflineBookMeta[] = [];
+    for (const key of allKeys) {
+      if (typeof key === 'string' && key.startsWith(OFFLINE_PREFIX)) {
+        const item = await get<OfflineBookMeta & { blob?: Blob }>(key);
+        if (item) {
+          books.push({
+            fileId: item.fileId,
+            fileName: item.fileName,
+            fileType: item.fileType,
+            size: item.size,
+            downloadedAt: item.downloadedAt,
+            coverUrl: item.coverUrl,
+          });
+        }
+      }
+    }
+    // ダウンロード日時の新しい順にソート
+    return books.sort(
+      (a, b) => new Date(b.downloadedAt).getTime() - new Date(a.downloadedAt).getTime()
+    );
+  } catch (err) {
+    console.error('Failed to get all offline books:', err);
+    return [];
+  }
+}
+
+/**
+ * 指定ファイルがダウンロード済みかチェック
+ */
+export async function isBookDownloaded(fileId: string): Promise<boolean> {
+  try {
+    const data = await get(`${OFFLINE_PREFIX}${fileId}`);
+    return !!data;
+  } catch (err) {
+    return false;
+  }
+}

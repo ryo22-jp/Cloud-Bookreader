@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ViewerSettings, BookProgress } from '@/types';
 import { ReaderControls } from './ReaderControls';
-import { saveLocalProgress, saveViewerSettings, saveCoverImage, getCoverImage } from '@/lib/storage';
+import { saveLocalProgress, saveViewerSettings, saveCoverImage, getCoverImage, getOfflineBookBlob } from '@/lib/storage';
 import { Loader2 } from 'lucide-react';
 
 interface PdfViewerProps {
@@ -43,7 +43,7 @@ export function PdfViewer({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // PDF.jsドキュメントの読み込み（Range Requestストリーミング）
+  // PDF.jsドキュメントの読み込み（ローカルキャッシュまたはRange Requestストリーミング）
   useEffect(() => {
     let isMounted = true;
 
@@ -54,12 +54,23 @@ export function PdfViewer({
         // Worker設定
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
-        const loadingTask = pdfjsLib.getDocument({
-          url: `/api/drive/stream/${fileId}`,
-          disableAutoFetch: true, // 全体ダウンロードを無効化（Rangeリクエストでオンデマンド取得）
-          disableStream: false,
-          rangeChunkSize: 131072, // 128KB チャンク
-        });
+        // オフライン保存されているかチェック
+        const offlineBlob = await getOfflineBookBlob(fileId);
+
+        let loadingTask;
+        if (offlineBlob) {
+          const arrayBuffer = await offlineBlob.arrayBuffer();
+          loadingTask = pdfjsLib.getDocument({
+            data: arrayBuffer,
+          });
+        } else {
+          loadingTask = pdfjsLib.getDocument({
+            url: `/api/drive/stream/${fileId}`,
+            disableAutoFetch: true, // 全体ダウンロードを無効化（Rangeリクエストでオンデマンド取得）
+            disableStream: false,
+            rangeChunkSize: 131072, // 128KB チャンク
+          });
+        }
 
         const pdfDoc = await loadingTask.promise;
         if (!isMounted) return;

@@ -28,6 +28,16 @@ export interface AppConfig {
   rootFolderName?: string;
 }
 
+export interface OfflineBook {
+  fileId: string;
+  fileName: string;
+  fileType: 'pdf' | 'zip' | 'cbz' | 'epub';
+  size: number;
+  downloadedAt: string;
+  coverUrl?: string;
+  blob: Blob;
+}
+
 export interface ViewerSettings {
   readingDirection: 'rtl' | 'ltr' | 'vertical'; // rtl: 右開き(マンガ), ltr: 左開き, vertical: 縦スクロール
   pageSpread: 'single' | 'double' | 'auto'; // single: 単ページ, double: 見開き, auto: 画面幅による自動切替

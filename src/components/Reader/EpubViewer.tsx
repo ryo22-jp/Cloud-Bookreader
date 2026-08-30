@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ViewerSettings, BookProgress } from '@/types';
 import { ReaderControls } from './ReaderControls';
-import { saveLocalProgress, saveViewerSettings } from '@/lib/storage';
+import { saveLocalProgress, saveViewerSettings, getOfflineBookBlob } from '@/lib/storage';
 import { Loader2 } from 'lucide-react';
 import ePub, { Book, Rendition, Location } from 'epubjs';
 
@@ -39,9 +39,15 @@ export function EpubViewer({
       setIsLoading(true);
 
       try {
-        const streamUrl = `/api/drive/stream/${fileId}`;
-        const response = await fetch(streamUrl);
-        const arrayBuffer = await response.arrayBuffer();
+        const offlineBlob = await getOfflineBookBlob(fileId);
+        let arrayBuffer: ArrayBuffer;
+        if (offlineBlob) {
+          arrayBuffer = await offlineBlob.arrayBuffer();
+        } else {
+          const streamUrl = `/api/drive/stream/${fileId}`;
+          const response = await fetch(streamUrl);
+          arrayBuffer = await response.arrayBuffer();
+        }
 
         const book = ePub(arrayBuffer);
         bookRef.current = book;

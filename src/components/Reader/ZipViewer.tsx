@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ViewerSettings, BookProgress } from '@/types';
 import { ReaderControls } from './ReaderControls';
-import { saveLocalProgress, saveViewerSettings, saveCoverImage, getCoverImage } from '@/lib/storage';
+import { saveLocalProgress, saveViewerSettings, saveCoverImage, getCoverImage, getOfflineBookBlob } from '@/lib/storage';
 import { Loader2 } from 'lucide-react';
 import { unzip, ZipEntry } from 'unzipit';
 
@@ -55,16 +55,16 @@ export function ZipViewer({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // ZIP/CBZ の Central Directory を Range Request で高速取得
+  // ZIP/CBZ の Central Directory を Range Request または ローカルBlob から高速取得
   useEffect(() => {
     let isMounted = true;
 
     async function loadZip() {
       setIsLoading(true);
       try {
-        const streamUrl = `/api/drive/stream/${fileId}`;
-        // unzipit は HTTP Range Request で Central Directory のみを取得
-        const { entries } = await unzip(streamUrl);
+        const offlineBlob = await getOfflineBookBlob(fileId);
+        const source = offlineBlob || `/api/drive/stream/${fileId}`;
+        const { entries } = await unzip(source);
 
         // 画像ファイルのみ抽出してファイル名順に自然ソート
         const imageEntries = Object.values(entries)
