@@ -20,6 +20,7 @@
     a { color: #2563eb; text-decoration: underline; font-weight: bold; }
     .btn-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; text-align: center; margin: 20px 0; }
     .warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 20px 0; }
+    .trust-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin: 20px 0; }
     .step-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 16px 0; }
     table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
     th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
@@ -34,6 +35,16 @@
 
   <h2>🛡️ なぜ「自分専用（セルフホスト）」なのか？</h2>
   <p>本アプリは、誰でも <strong>無料のVercelサーバー ＋ ご自身のGoogle Cloudキー</strong> を使って、<strong>「誰にも邪魔されない完全プライベートな自分専用リーダー」</strong> を約5分で立ち上げられるように設計されています。</p>
+
+  <h2>🔍 アプリの信頼性と透明性（ソースコードの確認方法）</h2>
+  <div class="trust-box">
+    <p style="margin-top:0; font-weight:bold; color:#15803d;">「自分のGoogleドライブを連携しても本当に安全か？」を誰もが自身の目で検証できます。</p>
+    <ol style="margin-bottom:0; padding-left: 20px;">
+      <li><strong>全ソースコードをGitHubで完全公開</strong>: すべてのプログラムコードは <a href="https://github.com/ryo22-jp/Cloud-Bookreader" target="_blank">GitHubリポジトリ（オープンソース）</a> で公開されており、不正なデータ送信がないことを1行残らず確認できます。</li>
+      <li><strong>ソースコードから直接ビルド（改ざん不能）</strong>: 「Deploy to Vercel」でGitHub上のコードがあなたのGitHubに複製され自動ビルドされるため、開発者が裏で別のコードを差し挟む余地はありません。</li>
+      <li><strong>ブラウザ（F12）で通信先をいつでも検証可能</strong>: 開発者ツールの「Network」タブから、通信相手が「Google公式サーバー」と「あなた自身のVercelサーバー」のみであることを直接確認できます。</li>
+    </ol>
+  </div>
 
   <div class="warning-box">
     <strong style="color:#b45309;">⚠️ ご利用にあたって（免責事項）</strong>
