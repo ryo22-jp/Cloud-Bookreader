@@ -2,13 +2,13 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>Cloud BookReader 使い方ガイド</title>
+  <title>Cloud BookReader 導入＆操作マニュアル</title>
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
       line-height: 1.8;
       color: #1f2937;
-      max-width: 800px;
+      max-width: 850px;
       margin: 40px auto;
       padding: 0 20px;
     }
@@ -19,66 +19,74 @@
     blockquote { border-left: 4px solid #cbd5e1; margin: 0; padding-left: 14px; color: #475569; font-style: italic; }
     a { color: #2563eb; text-decoration: underline; font-weight: bold; }
     .btn-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 12px; padding: 16px; text-align: center; margin: 20px 0; }
-    .feature-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin: 20px 0; }
+    .warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 20px 0; }
+    .step-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 16px 0; }
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+    th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
+    th { background: #f1f5f9; }
   </style>
 </head>
 <body>
-  <h1>【完全無料】Googleドライブの自炊マンガ・書籍を全デバイスで爆速ストリーミング！「Cloud BookReader」の使い方ガイド</h1>
+  <h1>【完全無料・自分専用】Googleドライブの自炊マンガ・書籍を全デバイスで爆速ストリーミング！「Cloud BookReader」導入＆操作マニュアル</h1>
   
-  <p>Googleドライブに保存してある自炊マンガや電子書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・端末の容量消費ゼロ</strong> で快適に読めるWebリーダーサービス <strong>「Cloud BookReader」</strong> を公開しました！</p>
+  <p>Googleドライブに保存してある自炊マンガや電子書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・端末の容量消費ゼロ</strong> で快適に読めるクラウドWebリーダー <strong>「Cloud BookReader」</strong> のご紹介です。</p>
   <p>スマートフォン、タブレット、PCなどあらゆるデバイスに対応し、<strong>「PCで読んだ続きを、外出先のスマホで1秒で再開」</strong> できます。</p>
-  <p>面倒なアプリのインストールやアカウント登録、API設定などは一切不要。<strong>Googleアカウントでログインして自分の本棚フォルダを選ぶだけ（約10秒）</strong> で、誰でも今すぐ無料で利用できます。</p>
 
-  <div class="btn-box">
-    <p style="margin:0; font-size: 14px; color: #1e40af;">🌐 サービスURL（今すぐ無料で使えます）</p>
-    <p style="margin: 8px 0 0 0; font-size: 18px;"><a href="https://reader.puzzleout.net" target="_blank">https://reader.puzzleout.net</a></p>
+  <h2>🛡️ なぜ「自分専用（セルフホスト）」なのか？</h2>
+  <p>本アプリは、誰でも <strong>無料のVercelサーバー ＋ ご自身のGoogle Cloudキー</strong> を使って、<strong>「誰にも邪魔されない完全プライベートな自分専用リーダー」</strong> を約5分で立ち上げられるように設計されています。</p>
+
+  <div class="warning-box">
+    <strong style="color:#b45309;">⚠️ ご利用にあたって（免責事項）</strong>
+    <p style="margin: 8px 0 0 0; font-size: 13px; color:#78350f;">
+      本サービスはオープンソースの個人利用向けツールです。Googleドライブ内の書籍ファイルは「読み取り専用」で安全に取得され、サーバー上にデータが保存・収集されることはありません。利用規約および免責事項をご確認のうえ、自己責任にてご利用ください。
+    </p>
   </div>
 
-  <h2>📖 Cloud BookReader とは？</h2>
-  <p>従来の電子書籍リーダーアプリのように <strong>「何百メガもある本をスマホに丸ごとダウンロードして空き容量を圧迫する」</strong> 必要はもうありません。</p>
+  <h2>🚀 【約5分】自分専用リーダーの立ち上げ手順（完全図解）</h2>
 
-  <h3>✨ 主な特徴</h3>
-  <ul>
-    <li><strong>⚡ ダウンロード待ち0秒（HTTP Range Request ストリーミング技術）</strong>: 500MBを超える大容量ファイルでも、今開いているページだけを瞬時に取得。端末容量を消費しません。</li>
-    <li><strong>📥 最大5冊までのオフライン保存（機内モード・ギガ節約対応）</strong>: 外出先や地下鉄で読みたい本だけ、自宅のWi-Fi環境でワンタップ事前ダウンロード（最大5冊）。通信ゼロで爆速読書できます。</li>
-    <li><strong>🔄 クラウドしおり・進捗・表紙の完全自動同期</strong>: 読んだページや表紙サムネイルはGoogleドライブの専用隠し領域（<code>drive.appdata</code>）に自動保存。</li>
-    <li><strong>📚 幅広いファイル形式に対応</strong>: PDF、ZIP/CBZ（マンガ見開き）、EPUB（縦書き・文字サイズ変更）。</li>
-    <li><strong>📱 PWA対応（全画面ネイティブアプリ化）</strong>: ホーム画面に追加するだけで、アドレスバーのない全画面アプリとして起動。</li>
-    <li><strong>🎨 目に優しい2つの読書空間</strong>: Midnight（木造書斎・ダーク）と Paper（和紙ミニマル・ライト）。</li>
-    <li><strong>🛡️ 読み取り専用 ＋ 専用隠し領域の安全設計</strong>: マンガや書籍は「読み取り専用（<code>drive.readonly</code>）」で取得し、ファイルを編集・削除することはシステム上絶対にできない安心設計です。</li>
-  </ul>
-
-  <h2>📥 オフライン保存（ダウンロード）の使い方</h2>
-  <div class="feature-box">
-    <ol style="margin:0; padding-left: 20px;">
-      <li>書籍一覧の右側にある <strong>「📥（ダウンロード）」アイコン</strong> をクリックします。</li>
-      <li>数秒〜十数秒でダウンロードが完了し、<strong>「✅ 保存済」</strong> バッジに変わります。</li>
-      <li>保存した本は、<strong>電波のない場所（機内モードや地下鉄）でも通信量ゼロ・爆速</strong> で読書できます。</li>
-      <li>本棚上部の <strong>「保存リストを見る」</strong> から、合計容量の確認や削除（ゴミ箱アイコン）がいつでも行えます。</li>
+  <div class="step-box">
+    <h3 style="margin-top:0;">ステップ1: Google Cloud で無料APIキーを取得（約3分）</h3>
+    <ol>
+      <li><a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> でプロジェクトを新規作成。</li>
+      <li>「ライブラリ」から <code>Google Drive API</code> と <code>Google Picker API</code> を検索し「有効にする」。</li>
+      <li>「OAuth 同意画面」で「外部」を選択し、スコープに <code>drive.readonly</code> と <code>drive.appdata</code> を追加。「テストユーザー」にご自身のGmailを登録。</li>
+      <li>「認証情報」→「OAuth クライアント ID」を作成し、「クライアント ID」と「クライアント シークレット」をコピー。</li>
     </ol>
   </div>
 
-  <h2>🚀 かんたん3ステップ！使い方ガイド（所要時間：10秒）</h2>
-  <ol>
-    <li><strong>サイトにアクセスしてログイン</strong>: <a href="https://reader.puzzleout.net" target="_blank">https://reader.puzzleout.net</a> を開き、「Googleアカウントでログイン」を押します。</li>
-    <li><strong>本棚にするフォルダを選択</strong>: 「Googleドライブから本棚フォルダを選択」を押し、自分の「マンガ」や「自炊本」フォルダを選んで「選択」を押します。</li>
-    <li><strong>読書スタート！</strong>: フォルダ内の本が一覧表示され、読みたい本をタップすればすぐに読書が始まります。</li>
-  </ol>
+  <div class="step-box">
+    <h3 style="margin-top:0;">ステップ2: Vercel にワンクリックでデプロイ（約2分）</h3>
+    <p>以下のボタンをクリックして、Vercelへデプロイします：</p>
+    <div style="text-align:center; margin: 15px 0;">
+      <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fryo22-jp%2FCloud-Bookreader&env=GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXTAUTH_SECRET,NEXTAUTH_URL&envDescription=Google%20Cloud%20Console%E3%81%A7%E5%8F%96%E5%BE%97%E3%81%97%E3%81%9F%E8%A8%AD%E5%AE%9A%E5%80%A4%E3%82%92%E5%85%A5%E5%8A%9B%E3%81%97%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84&project-name=my-cloud-bookreader" target="_blank" style="background:#000; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; display:inline-block; font-size:14px;">▲ Deploy to Vercel</a>
+    </div>
+    <table>
+      <tr><th>環境変数名</th><th>入力する値</th></tr>
+      <tr><td><code>GOOGLE_CLIENT_ID</code></td><td>コピーしたクライアントID</td></tr>
+      <tr><td><code>GOOGLE_CLIENT_SECRET</code></td><td>コピーしたクライアントシークレット</td></tr>
+      <tr><td><code>NEXTAUTH_SECRET</code></td><td>ランダムな英数字32文字以上</td></tr>
+      <tr><td><code>NEXTAUTH_URL</code></td><td><code>https://my-cloud-bookreader.vercel.app</code>（発行URL）</td></tr>
+    </table>
+  </div>
 
-  <h2>📱 スマホ・タブレットでアプリ化する（PWA設定）</h2>
+  <div class="step-box">
+    <h3 style="margin-top:0;">ステップ3: Google Cloud にURLを登録して完成！</h3>
+    <ol>
+      <li>Google Cloud の「OAuth 2.0 クライアント ID」に発行されたURLを追加：
+        <ul>
+          <li><strong>承認済みの JavaScript 生成元</strong>: <code>https://発行されたあなた専用のURL</code></li>
+          <li><strong>承認済みのリダイレクト URI</strong>: <code>https://発行されたあなた専用のURL/api/auth/callback/google</code></li>
+        </ul>
+      </li>
+      <li>Vercelの <code>NEXTAUTH_URL</code> を確定URLにして再デプロイ。</li>
+    </ol>
+  </div>
+
+  <h2>📖 読書機能・操作マニュアル</h2>
   <ul>
-    <li><strong>iPhone / iPad (Safari)</strong>: 画面下の「共有ボタン」→「ホーム画面に追加」</li>
-    <li><strong>Android (Chrome)</strong>: 右上メニュー「︙」→「アプリをインストール」</li>
+    <li><strong>本棚フォルダの選択</strong>: 「Googleドライブから本棚フォルダを選択」でマンガが入っているフォルダを指定。</li>
+    <li><strong>📥 オフライン保存（最大5冊）</strong>: 「📥 アイコン」を押すと、端末に一時保存され、機内モードや電波のない場所でも読書可能。</li>
+    <li><strong>PWAアプリ化</strong>: iPhone（Safari: ホーム画面に追加） / Android（Chrome: アプリをインストール）。</li>
   </ul>
-
-  <h2>❓ よくある質問（FAQ）</h2>
-  <blockquote>
-    <p><strong>Q. 完全無料で利用できますか？</strong><br>
-    はい、完全無料です。利用料金や課金は一切発生しません。</p>
-  </blockquote>
-  <blockquote>
-    <p><strong>Q. Googleドライブ内のファイルを勝手に編集・削除される心配はありませんか？</strong><br>
-    一切ありません。書籍データは「読み取り専用」で取得するため、ファイルを書き換えたり削除する権限はシステム上持っていません。また、しおりデータは隔離されたアプリ専用領域にのみ保存されます。</p>
-  </blockquote>
 </body>
 </html>
