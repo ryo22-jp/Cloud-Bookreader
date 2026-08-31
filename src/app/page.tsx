@@ -16,7 +16,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 
-export function HomePage() {
+export default function HomePage() {
   const { data: session, status } = useSession();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
@@ -158,5 +158,3 @@ export function HomePage() {
     </div>
   );
 }
-
-export default HomePage;
