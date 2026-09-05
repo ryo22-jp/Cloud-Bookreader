@@ -6,8 +6,8 @@ import {
   getCloudProgress,
   saveCloudProgress,
   deleteCloudProgress,
-  getCloudConfig,
-  saveCloudConfig,
+  getCloudAppConfig,
+  saveCloudAppConfig,
 } from '@/lib/drive';
 
 export class GoogleDriveProvider implements StorageProvider {
@@ -84,10 +84,10 @@ export class GoogleDriveProvider implements StorageProvider {
   }
 
   async getConfig(): Promise<AppConfig> {
-    return getCloudConfig(this.accessToken);
+    return getCloudAppConfig(this.accessToken);
   }
 
   async saveConfig(config: Partial<AppConfig>): Promise<boolean> {
-    return saveCloudConfig(this.accessToken, config);
+    return saveCloudAppConfig(this.accessToken, config);
   }
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getStorageProvider } from '@/lib/storage';
+import { getStorageProvider } from '@/lib/cloud-storage';
 import { BookProgress } from '@/types';
 
 export const dynamic = 'force-dynamic';
