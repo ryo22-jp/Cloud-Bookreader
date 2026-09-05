@@ -1,6 +1,8 @@
 import { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import AzureADProvider from 'next-auth/providers/azure-ad';
+import CredentialsProvider from 'next-auth/providers/credentials';
+import { createClient } from 'webdav';
 
 /**
  * Googleのリフレッシュトークンを使用してアクセストークンを更新
@@ -106,6 +108,51 @@ const providers: NextAuthOptions['providers'] = [
       },
     },
   }),
+
+  // 自宅NAS (WebDAV) 認証プロバイダー
+  CredentialsProvider({
+    id: 'webdav',
+    name: 'WebDAV (自宅NAS)',
+    credentials: {
+      serverUrl: { label: 'Server URL', type: 'text' },
+      username: { label: 'Username', type: 'text' },
+      password: { label: 'Password', type: 'password' },
+    },
+    async authorize(credentials) {
+      if (!credentials?.serverUrl) {
+        throw new Error('サーバーURLを入力してください');
+      }
+
+      let url = credentials.serverUrl.trim();
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = `https://${url}`;
+      }
+
+      try {
+        const client = createClient(url, {
+          username: credentials.username || '',
+          password: credentials.password || '',
+        });
+
+        // 接続疎通確認（ルート一覧の取得）
+        await client.getDirectoryContents('/', { deep: false });
+
+        return {
+          id: `webdav-${Date.now()}`,
+          name: credentials.username || 'NAS User',
+          email: url,
+          serverUrl: url,
+          username: credentials.username || '',
+          password: credentials.password || '',
+        } as any;
+      } catch (error: any) {
+        console.error('WebDAV authorize error:', error);
+        throw new Error(
+          `WebDAVサーバーに接続できませんでした: ${error.message || 'URLまたはログイン情報を確認してください'}`
+        );
+      }
+    },
+  }),
 ];
 
 // Azure AD (OneDrive) が設定されている場合に追加
@@ -130,6 +177,20 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user, account }) {
       // 初回サインイン時
       if (account && user) {
+        if (account.provider === 'webdav') {
+          const webdavUser = user as any;
+          return {
+            accessToken: 'webdav-session-token',
+            provider: 'webdav' as const,
+            webdavConfig: {
+              url: webdavUser.serverUrl,
+              username: webdavUser.username,
+              password: webdavUser.password,
+            },
+            user,
+          };
+        }
+
         const provider = (account.provider === 'azure-ad' ? 'azure-ad' : 'google') as
           | 'google'
           | 'azure-ad';
@@ -140,6 +201,11 @@ export const authOptions: NextAuthOptions = {
           provider,
           user,
         };
+      }
+
+      // WebDAV はリフレッシュ不要
+      if (token.provider === 'webdav') {
+        return token;
       }
 
       // アクセストークンが有効な場合
@@ -155,7 +221,8 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
-      session.provider = token.provider as 'google' | 'azure-ad';
+      session.provider = token.provider as 'google' | 'azure-ad' | 'webdav';
+      session.webdavConfig = token.webdavConfig;
       session.error = token.error as string;
       return session;
     },

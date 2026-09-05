@@ -1,7 +1,7 @@
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 
 export interface StorageProvider {
-  readonly providerId: 'google' | 'onedrive';
+  readonly providerId: 'google' | 'onedrive' | 'webdav';
   readonly providerName: string;
 
   /**

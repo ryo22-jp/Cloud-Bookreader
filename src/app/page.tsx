@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
 import { Header } from '@/components/Header';
 import { Bookshelf } from '@/components/Bookshelf';
+import { WebDAVConnectModal } from '@/components/Bookshelf/WebDAVConnectModal';
 import {
   Sparkles,
   ArrowRight,
@@ -12,12 +13,14 @@ import {
   ExternalLink,
   ShieldCheck,
   Cloud,
+  Server,
 } from 'lucide-react';
 
 export default function HomePage() {
   const { data: session, status } = useSession();
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [isWebDAVModalOpen, setIsWebDAVModalOpen] = useState<boolean>(false);
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -52,21 +55,21 @@ export default function HomePage() {
           <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 text-center">
             <div className="inline-flex items-center space-x-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-4 py-1.5 text-xs font-semibold text-[var(--accent)] mb-8 shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Google Drive & OneDrive 対応 マルチクラウド電子書籍リーダー</span>
+              <span>Google Drive • OneDrive • 自宅NAS (WebDAV) 対応</span>
             </div>
 
             <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] sm:text-5xl leading-tight">
-              クラウド内の自炊本を、<br />
+              クラウド＆自宅NASの自炊本を、<br />
               <span className="text-[var(--accent)]">どこでも軽快にストリーミング。</span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-xl text-sm sm:text-base text-[var(--text-muted)] leading-relaxed">
               PDF、ZIP、CBZ、EPUBをダウンロード待ちなしで即座に閲覧。
-              しおりや読書進捗もクラウドと完全同期します。
+              しおりや読書進捗もクラウド・NASと完全同期します。
             </p>
 
-            {/* ログインボタン群 */}
-            <div className="mt-10 flex flex-col items-center justify-center space-y-3 max-w-md mx-auto">
+            {/* 接続ボタン群 */}
+            <div className="mt-10 flex flex-col items-center justify-center space-y-3 max-w-lg mx-auto w-full">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                 {/* Google ログイン */}
                 <button
@@ -89,12 +92,21 @@ export default function HomePage() {
                 </button>
               </div>
 
+              {/* 自宅NAS (WebDAV) 接続ボタン */}
+              <button
+                onClick={() => setIsWebDAVModalOpen(true)}
+                className="w-full flex items-center justify-center space-x-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 px-5 py-3.5 text-sm font-bold transition active:scale-[0.98] shadow-sm"
+              >
+                <Server className="h-4 w-4" />
+                <span>自宅NAS (WebDAV) で接続</span>
+              </button>
+
               {/* 紹介記事リンク */}
               <a
                 href={GUIDE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full flex items-center justify-center space-x-2 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] px-5 py-3 text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm mt-2"
+                className="w-full flex items-center justify-center space-x-2 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] px-5 py-3 text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm mt-1"
               >
                 <BookOpen className="h-4 w-4 text-[var(--accent)]" />
                 <span>紹介記事・使い方ガイドを見る</span>
@@ -110,6 +122,12 @@ export default function HomePage() {
           </div>
         )}
       </main>
+
+      {/* 自宅NAS接続モーダル */}
+      <WebDAVConnectModal
+        isOpen={isWebDAVModalOpen}
+        onClose={() => setIsWebDAVModalOpen(false)}
+      />
 
       {/* フッター（ログイン後・未ログイン共通で目立つデザイン） */}
       <footer className="border-t border-[var(--border-color)] py-8 px-4 text-center text-xs text-[var(--text-muted)]">

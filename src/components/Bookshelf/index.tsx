@@ -34,6 +34,7 @@ import {
 } from '@/lib/storage';
 import { openFolderPicker } from '@/lib/picker';
 import { OneDriveFolderPickerModal } from './OneDriveFolderPickerModal';
+import { WebDAVFolderPickerModal } from './WebDAVFolderPickerModal';
 
 interface FolderBreadcrumb {
   id: string;
@@ -68,6 +69,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const [error, setError] = useState<string | null>(null);
   const [isPickerOpening, setIsPickerOpening] = useState<boolean>(false);
   const [isOneDrivePickerOpen, setIsOneDrivePickerOpen] = useState<boolean>(false);
+  const [isWebDAVPickerOpen, setIsWebDAVPickerOpen] = useState<boolean>(false);
 
   // 進捗データ & 表紙キャッシュ
   const [progressMap, setProgressMap] = useState<Record<string, BookProgress>>({});
@@ -334,6 +336,11 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   // 本棚フォルダ選択（プロバイダー別）
   const handleOpenPicker = async () => {
     if (!session?.accessToken) return;
+
+    if (session.provider === 'webdav') {
+      setIsWebDAVPickerOpen(true);
+      return;
+    }
 
     if (session.provider === 'azure-ad') {
       setIsOneDrivePickerOpen(true);
@@ -723,7 +730,11 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
             本棚にするフォルダを選択してください
           </h3>
           <p className="mt-1.5 text-xs text-[var(--text-muted)] max-w-sm leading-relaxed">
-            {session?.provider === 'azure-ad' ? 'OneDrive' : 'Googleドライブ'}内のマンガや自炊書籍が入ったフォルダを選択すると、本棚に本が並びます。
+            {session?.provider === 'webdav'
+              ? '自宅NAS'
+              : session?.provider === 'azure-ad'
+              ? 'OneDrive'
+              : 'Googleドライブ'}内のマンガや自炊書籍が入ったフォルダを選択すると、本棚に本が並びます。
           </p>
           <button
             onClick={handleOpenPicker}
@@ -731,7 +742,13 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
             className="mt-5 flex items-center space-x-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[var(--accent)]/20 hover:opacity-90 transition"
           >
             <FolderSearch className="h-4 w-4" />
-            <span>{session?.provider === 'azure-ad' ? 'OneDriveから本棚フォルダを選択' : 'Googleドライブから本棚フォルダを選択'}</span>
+            <span>
+              {session?.provider === 'webdav'
+                ? '自宅NASから本棚フォルダを選択'
+                : session?.provider === 'azure-ad'
+                ? 'OneDriveから本棚フォルダを選択'
+                : 'Googleドライブから本棚フォルダを選択'}
+            </span>
           </button>
         </div>
       ) : (
@@ -757,6 +774,13 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       <OneDriveFolderPickerModal
         isOpen={isOneDrivePickerOpen}
         onClose={() => setIsOneDrivePickerOpen(false)}
+        onSelectFolder={applySelectedFolder}
+      />
+
+      {/* 自宅NAS (WebDAV) 用フォルダ選択モーダル */}
+      <WebDAVFolderPickerModal
+        isOpen={isWebDAVPickerOpen}
+        onClose={() => setIsWebDAVPickerOpen(false)}
         onSelectFolder={applySelectedFolder}
       />
     </div>

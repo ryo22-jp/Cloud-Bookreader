@@ -3,7 +3,12 @@ import 'next-auth';
 declare module 'next-auth' {
   interface Session {
     accessToken?: string;
-    provider?: 'google' | 'azure-ad';
+    provider?: 'google' | 'azure-ad' | 'webdav';
+    webdavConfig?: {
+      url: string;
+      username?: string;
+      password?: string;
+    };
     error?: string;
     user?: {
       name?: string | null;
@@ -18,7 +23,12 @@ declare module 'next-auth/jwt' {
     accessToken?: string;
     accessTokenExpires?: number;
     refreshToken?: string;
-    provider?: 'google' | 'azure-ad';
+    provider?: 'google' | 'azure-ad' | 'webdav';
+    webdavConfig?: {
+      url: string;
+      username?: string;
+      password?: string;
+    };
     error?: string;
   }
 }
