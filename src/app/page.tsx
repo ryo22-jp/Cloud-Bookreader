@@ -112,6 +112,17 @@ export default function HomePage() {
                 <span>紹介記事・使い方ガイドを見る</span>
                 <ExternalLink className="h-3.5 w-3.5 opacity-60" />
               </a>
+
+              {/* OneDrive ＆ 自宅NAS 設定ガイドリンク */}
+              <div className="pt-2">
+                <Link
+                  href="/guide"
+                  className="text-xs text-[var(--accent)] hover:underline font-medium inline-flex items-center space-x-1"
+                >
+                  <span>OneDrive ＆ 自宅NAS の設定方法・接続手順はこちら</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
+              </div>
             </div>
 
             {/* 安全性に関するシンプルな注記 */}
@@ -146,6 +157,10 @@ export default function HomePage() {
         </div>
 
         <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 mb-3">
+          <Link href="/guide" className="hover:text-[var(--text-primary)] transition text-[var(--accent)] font-medium">
+            OneDrive ＆ 自宅NAS 設定ガイド
+          </Link>
+          <span>•</span>
           <Link href="/privacy" className="hover:text-[var(--text-primary)] transition">
             プライバシーポリシー
           </Link>

@@ -28,81 +28,64 @@
   </style>
 </head>
 <body>
-  <h1>【完全無料・自分専用】Googleドライブの自炊マンガ・書籍を全デバイスで爆速ストリーミング！「Cloud BookReader」導入＆操作マニュアル</h1>
+  <h1>【完全無料・マルチクラウド対応】Google Drive / OneDrive / 自宅NASの自炊本を全デバイスで爆速ストリーミング！「Cloud BookReader」導入＆操作マニュアル</h1>
   
-  <p>Googleドライブに保存してある自炊マンガや電子書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・端末の容量消費ゼロ</strong> で快適に読めるクラウドWebリーダー <strong>「Cloud BookReader」</strong> のご紹介です。</p>
+  <p>Google Drive、Microsoft OneDrive、およびご自宅のNAS（Synology、QNAP、Nextcloud等）に保存してある自炊マンガや電子書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・端末の容量消費ゼロ</strong> で快適に読めるクラウドWebリーダー <strong>「Cloud BookReader」</strong> のご紹介です。</p>
   <p>スマートフォン、タブレット、PCなどあらゆるデバイスに対応し、<strong>「PCで読んだ続きを、外出先のスマホで1秒で再開」</strong> できます。</p>
 
   <div class="btn-box">
     <p style="margin:0; font-size: 14px; color: #1e40af;">📖 公式紹介記事＆使い方ガイド</p>
     <p style="margin: 8px 0 0 0; font-size: 18px;"><a href="https://puzzleout.net/cloud-book-reader" target="_blank">https://puzzleout.net/cloud-book-reader</a></p>
+    <p style="margin: 8px 0 0 0; font-size: 13px;"><a href="https://cloud-bookreader.vercel.app/guide" target="_blank">🌐 OneDrive ＆ 自宅NAS 設定Webガイドはこちら</a></p>
   </div>
 
+  <h2>🌟 対応ストレージと特徴</h2>
+  <table>
+    <tr><th>ストレージ</th><th>おすすめユーザー</th><th>特徴</th></tr>
+    <tr><td><strong>🔴 Google Drive</strong></td><td>すべてのGoogleユーザー</td><td>アプリ設定・しおりを専用隠し領域に自動同期</td></tr>
+    <tr><td><strong>🔵 Microsoft OneDrive</strong></td><td>Microsoft 365 ユーザー</td><td>1TBの大容量をフル活用。Graph API による爆速ストリーミング</td></tr>
+    <tr><td><strong>🏠 自宅NAS (WebDAV)</strong></td><td>自炊ヘビーユーザー</td><td>Synology / QNAP 等のテラバイト級ハードディスクに直結。容量無制限</td></tr>
+  </table>
+
   <h2>🛡️ なぜ「自分専用（セルフホスト）」なのか？</h2>
-  <p>本アプリは、誰でも <strong>無料のVercelサーバー ＋ ご自身のGoogle Cloudキー</strong> を使って、<strong>「誰にも邪魔されない完全プライベートな自分専用リーダー」</strong> を約5分で立ち上げられるように設計されています。</p>
+  <p>本アプリは、誰でも <strong>無料のVercelサーバー ＋ ご自身のAPIキー</strong> を使って、<strong>「誰にも邪魔されない完全プライベートな自分専用リーダー」</strong> を約5分で立ち上げられるように設計されています。</p>
 
   <h2>🔍 アプリの信頼性と透明性（ソースコードの確認方法）</h2>
   <div class="trust-box">
-    <p style="margin-top:0; font-weight:bold; color:#15803d;">「自分のGoogleドライブを連携しても本当に安全か？」を誰もが自身の目で検証できます。</p>
+    <p style="margin-top:0; font-weight:bold; color:#15803d;">「自分のクラウドやNASを連携しても本当に安全か？」を誰もが自身の目で検証できます。</p>
     <ol style="margin-bottom:0; padding-left: 20px;">
       <li><strong>全ソースコードをGitHubで完全公開</strong>: すべてのプログラムコードは <a href="https://github.com/ryo22-jp/Cloud-Bookreader" target="_blank">GitHubリポジトリ（オープンソース）</a> で公開されており、不正なデータ送信がないことを1行残らず確認できます。</li>
       <li><strong>ソースコードから直接ビルド（改ざん不能）</strong>: 「Deploy to Vercel」でGitHub上のコードがあなたのGitHubに複製され自動ビルドされるため、開発者が裏で別のコードを差し挟む余地はありません。</li>
-      <li><strong>ブラウザ（F12）で通信先をいつでも検証可能</strong>: 開発者ツールの「Network」タブから、通信相手が「Google公式サーバー」と「あなた自身のVercelサーバー」のみであることを直接確認できます。</li>
+      <li><strong>ブラウザ（F12）で通信先をいつでも検証可能</strong>: 開発者ツールの「Network」タブから、通信相手が「公式クラウドAPI／自宅NAS」と「あなた自身のVercelサーバー」のみであることを直接確認できます。</li>
     </ol>
   </div>
 
-  <div class="warning-box">
-    <strong style="color:#b45309;">⚠️ ご利用にあたって（免責事項）</strong>
-    <p style="margin: 8px 0 0 0; font-size: 13px; color:#78350f;">
-      本サービスはオープンソースの個人利用向けツールです。Googleドライブ内の書籍ファイルは「読み取り専用」で安全に取得され、サーバー上にデータが保存・収集されることはありません。利用規約および免責事項をご確認のうえ、自己責任にてご利用ください。
-    </p>
+  <h2>🔵 Microsoft OneDrive の設定手順</h2>
+  <div class="step-box">
+    <p>トップページの <strong>「OneDrive でログイン」</strong> ボタンをクリックし、お使いの Microsoft アカウントでサインインするだけです。本棚画面でアプリ内フォルダピッカーから本棚フォルダを選択してください。</p>
   </div>
 
-  <h2>🚀 【約5分】自分専用リーダーの立ち上げ手順（完全図解）</h2>
-
+  <h2>🏠 自宅NAS（WebDAV）の設定・接続手順</h2>
   <div class="step-box">
-    <h3 style="margin-top:0;">ステップ1: Google Cloud で無料APIキーを取得（約3分）</h3>
+    <h3>1. NAS側のWebDAVサーバー有効化</h3>
+    <ul>
+      <li><strong>Synology NAS</strong>: パッケージセンターから「WebDAV Server」をインストールし、「HTTPS を有効にする (ポート: 5006)」を適用。</li>
+      <li><strong>QNAP NAS</strong>: コントロールパネル →「アプリケーション」→「WebDAV」を開き有効化（ポート: 5001等）。</li>
+      <li><strong>Nextcloud / ownCloud</strong>: Web画面左下の「ファイル設定」に表示される WebDAV URL をコピー。</li>
+    </ul>
+    <h3>2. アプリでの接続</h3>
     <ol>
-      <li><a href="https://console.cloud.google.com/" target="_blank">Google Cloud Console</a> でプロジェクトを新規作成。</li>
-      <li>「ライブラリ」から <code>Google Drive API</code> と <code>Google Picker API</code> を検索し「有効にする」。</li>
-      <li>「OAuth 同意画面」で「外部」を選択し、スコープに <code>drive.readonly</code> と <code>drive.appdata</code> を追加。「テストユーザー」にご自身のGmailを登録。</li>
-      <li>「認証情報」→「OAuth クライアント ID」を作成し、「クライアント ID」と「クライアント シークレット」をコピー。</li>
-    </ol>
-  </div>
-
-  <div class="step-box">
-    <h3 style="margin-top:0;">ステップ2: Vercel にワンクリックでデプロイ（約2分）</h3>
-    <p>以下のボタンをクリックして、Vercelへデプロイします：</p>
-    <div style="text-align:center; margin: 15px 0;">
-      <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fryo22-jp%2FCloud-Bookreader&env=GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXTAUTH_SECRET,NEXTAUTH_URL&envDescription=Google%20Cloud%20Console%E3%81%A7%E5%8F%96%E5%BE%97%E3%81%97%E3%81%9F%E8%A8%AD%E5%AE%9A%E5%80%A4%E3%82%92%E5%85%A5%E5%8A%9B%E3%81%97%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84&project-name=my-cloud-bookreader" target="_blank" style="background:#000; color:#fff; padding:10px 20px; border-radius:8px; text-decoration:none; display:inline-block; font-size:14px;">▲ Deploy to Vercel</a>
-    </div>
-    <table>
-      <tr><th>環境変数名</th><th>入力する値</th></tr>
-      <tr><td><code>GOOGLE_CLIENT_ID</code></td><td>コピーしたクライアントID</td></tr>
-      <tr><td><code>GOOGLE_CLIENT_SECRET</code></td><td>コピーしたクライアントシークレット</td></tr>
-      <tr><td><code>NEXTAUTH_SECRET</code></td><td>ランダムな英数字32文字以上</td></tr>
-      <tr><td><code>NEXTAUTH_URL</code></td><td><code>https://my-cloud-bookreader.vercel.app</code>（発行URL）</td></tr>
-    </table>
-  </div>
-
-  <div class="step-box">
-    <h3 style="margin-top:0;">ステップ3: Google Cloud にURLを登録して完成！</h3>
-    <ol>
-      <li>Google Cloud の「OAuth 2.0 クライアント ID」に発行されたURLを追加：
-        <ul>
-          <li><strong>承認済みの JavaScript 生成元</strong>: <code>https://発行されたあなた専用のURL</code></li>
-          <li><strong>承認済みのリダイレクト URI</strong>: <code>https://発行されたあなた専用のURL/api/auth/callback/google</code></li>
-        </ul>
-      </li>
-      <li>Vercelの <code>NEXTAUTH_URL</code> を確定URLにして再デプロイ。</li>
+      <li>トップ画面の <strong>「自宅NAS (WebDAV) で接続」</strong> をクリック。</li>
+      <li>サーバーURL、ユーザー名、パスワードを入力して「NASに接続」。</li>
+      <li>フォルダ選択で、自炊本が入っている共有フォルダ（例: <code>/volume1/manga</code>）を指定すれば完了！</li>
     </ol>
   </div>
 
   <h2>📖 読書機能・操作マニュアル</h2>
   <ul>
-    <li><strong>本棚フォルダの選択</strong>: 「Googleドライブから本棚フォルダを選択」でマンガが入っているフォルダを指定。</li>
-    <li><strong>📥 オフライン保存（最大5冊）</strong>: 「📥 アイコン」を押すと、端末に一時保存され、機内モードや電波のない場所でも読書可能。</li>
-    <li><strong>PWAアプリ化</strong>: iPhone（Safari: ホーム画面に追加） / Android（Chrome: アプリをインストール）。</li>
+    <li><strong>⚡ HTTP Range Request 爆速ストリーミング</strong>: 今開くページだけを瞬時にダウンロード。端末容量ゼロ・待ち時間ゼロ。</li>
+    <li><strong>📥 オフライン保存（最大5冊）</strong>: 書籍行の「📥 アイコン」で保存。電波のない環境でも通信ゼロで読書。</li>
+    <li><strong>📱 PWAアプリ化</strong>: iPhone（Safari: ホーム画面に追加） / Android（Chrome: アプリをインストール）。</li>
   </ul>
 </body>
 </html>
