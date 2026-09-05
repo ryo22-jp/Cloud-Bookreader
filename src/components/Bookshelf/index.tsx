@@ -33,6 +33,7 @@ import {
   MAX_OFFLINE_BOOKS,
 } from '@/lib/storage';
 import { openFolderPicker } from '@/lib/picker';
+import { OneDriveFolderPickerModal } from './OneDriveFolderPickerModal';
 
 interface FolderBreadcrumb {
   id: string;
@@ -66,6 +67,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isPickerOpening, setIsPickerOpening] = useState<boolean>(false);
+  const [isOneDrivePickerOpen, setIsOneDrivePickerOpen] = useState<boolean>(false);
 
   // 進捗データ & 表紙キャッシュ
   const [progressMap, setProgressMap] = useState<Record<string, BookProgress>>({});
@@ -306,33 +308,44 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
     await refreshOfflineBooks();
   };
 
-  // Google Picker でフォルダを選択する
+  // フォルダ選択の確定処理
+  const applySelectedFolder = async (folderId: string, folderName: string) => {
+    const newConfig: AppConfig = {
+      rootFolderId: folderId,
+      rootFolderName: folderName,
+    };
+
+    setAppConfig(newConfig);
+    await saveLocalAppConfig(newConfig);
+
+    fetch('/api/drive/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newConfig),
+    }).catch(console.error);
+
+    setCurrentFolderId(folderId);
+    const initialCrumbs = [{ id: folderId, name: folderName }];
+    setBreadcrumbs(initialCrumbs);
+    sessionStorage.setItem(LAST_FOLDER_ID_KEY, folderId);
+    sessionStorage.setItem(LAST_BREADCRUMBS_KEY, JSON.stringify(initialCrumbs));
+  };
+
+  // 本棚フォルダ選択（プロバイダー別）
   const handleOpenPicker = async () => {
     if (!session?.accessToken) return;
-    setIsPickerOpening(true);
 
+    if (session.provider === 'azure-ad') {
+      setIsOneDrivePickerOpen(true);
+      return;
+    }
+
+    // Google Picker でフォルダを選択する
+    setIsPickerOpening(true);
     try {
       const selected = await openFolderPicker(session.accessToken);
       if (selected) {
-        const newConfig: AppConfig = {
-          rootFolderId: selected.id,
-          rootFolderName: selected.name,
-        };
-
-        setAppConfig(newConfig);
-        await saveLocalAppConfig(newConfig);
-
-        fetch('/api/drive/config', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newConfig),
-        }).catch(console.error);
-
-        setCurrentFolderId(selected.id);
-        const initialCrumbs = [{ id: selected.id, name: selected.name }];
-        setBreadcrumbs(initialCrumbs);
-        sessionStorage.setItem(LAST_FOLDER_ID_KEY, selected.id);
-        sessionStorage.setItem(LAST_BREADCRUMBS_KEY, JSON.stringify(initialCrumbs));
+        await applySelectedFolder(selected.id, selected.name);
       }
     } catch (err) {
       console.error('Picker open failed:', err);
@@ -710,7 +723,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
             本棚にするフォルダを選択してください
           </h3>
           <p className="mt-1.5 text-xs text-[var(--text-muted)] max-w-sm leading-relaxed">
-            Googleドライブ内のマンガや自炊書籍が入ったフォルダを選択すると、本棚に本が並びます。
+            {session?.provider === 'azure-ad' ? 'OneDrive' : 'Googleドライブ'}内のマンガや自炊書籍が入ったフォルダを選択すると、本棚に本が並びます。
           </p>
           <button
             onClick={handleOpenPicker}
@@ -718,7 +731,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
             className="mt-5 flex items-center space-x-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[var(--accent)]/20 hover:opacity-90 transition"
           >
             <FolderSearch className="h-4 w-4" />
-            <span>Googleドライブから本棚フォルダを選択</span>
+            <span>{session?.provider === 'azure-ad' ? 'OneDriveから本棚フォルダを選択' : 'Googleドライブから本棚フォルダを選択'}</span>
           </button>
         </div>
       ) : (
@@ -739,6 +752,13 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
           ))}
         </div>
       )}
+
+      {/* OneDrive用フォルダ選択モーダル */}
+      <OneDriveFolderPickerModal
+        isOpen={isOneDrivePickerOpen}
+        onClose={() => setIsOneDrivePickerOpen(false)}
+        onSelectFolder={applySelectedFolder}
+      />
     </div>
   );
 }

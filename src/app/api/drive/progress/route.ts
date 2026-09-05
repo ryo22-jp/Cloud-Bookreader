@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getCloudProgress, saveCloudProgress, deleteCloudProgress } from '@/lib/drive';
+import { getStorageProvider } from '@/lib/storage';
 import { BookProgress } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const progressData = await getCloudProgress(session.accessToken);
+    const provider = getStorageProvider(session);
+    const progressData = await provider.getProgress();
     return NextResponse.json(progressData);
   } catch (error: any) {
     console.error('API GET /api/drive/progress error:', error);
@@ -36,7 +37,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid progress data' }, { status: 400 });
     }
 
-    const success = await saveCloudProgress(session.accessToken, body);
+    const provider = getStorageProvider(session);
+    const success = await provider.saveProgress(body);
     if (!success) {
       return NextResponse.json({ error: 'Failed to save to cloud' }, { status: 500 });
     }
@@ -64,7 +66,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'fileId is required' }, { status: 400 });
     }
 
-    const success = await deleteCloudProgress(session.accessToken, fileId);
+    const provider = getStorageProvider(session);
+    const success = await provider.deleteProgress(fileId);
     return NextResponse.json({ success });
   } catch (error: any) {
     console.error('API DELETE /api/drive/progress error:', error);

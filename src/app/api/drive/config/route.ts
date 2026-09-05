@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getCloudAppConfig, saveCloudAppConfig } from '@/lib/drive';
+import { getStorageProvider } from '@/lib/storage';
 import { AppConfig } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +13,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const config = await getCloudAppConfig(session.accessToken);
+    const provider = getStorageProvider(session);
+    const config = await provider.getConfig();
     return NextResponse.json(config);
   } catch (error: any) {
     console.error('API GET /api/drive/config error:', error);
@@ -32,7 +33,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body: AppConfig = await request.json();
-    const success = await saveCloudAppConfig(session.accessToken, body);
+    const provider = getStorageProvider(session);
+    const success = await provider.saveConfig(body);
     if (!success) {
       return NextResponse.json({ error: 'Failed to save config' }, { status: 500 });
     }

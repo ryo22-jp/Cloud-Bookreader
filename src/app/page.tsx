@@ -11,6 +11,7 @@ import {
   BookOpen,
   ExternalLink,
   ShieldCheck,
+  Cloud,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -48,41 +49,56 @@ export default function HomePage() {
           />
         ) : (
           /* 未ログイン時：シンプルで洗練されたランディング */
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-28 text-center">
+          <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 text-center">
             <div className="inline-flex items-center space-x-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-4 py-1.5 text-xs font-semibold text-[var(--accent)] mb-8 shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Google Drive 直結型 クラウド電子書籍リーダー</span>
+              <span>Google Drive & OneDrive 対応 マルチクラウド電子書籍リーダー</span>
             </div>
 
             <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] sm:text-5xl leading-tight">
-              Googleドライブ内の自炊本を、<br />
+              クラウド内の自炊本を、<br />
               <span className="text-[var(--accent)]">どこでも軽快にストリーミング。</span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-xl text-sm sm:text-base text-[var(--text-muted)] leading-relaxed">
               PDF、ZIP、CBZ、EPUBをダウンロード待ちなしで即座に閲覧。
-              しおりや読書進捗もGoogle Driveと完全同期します。
+              しおりや読書進捗もクラウドと完全同期します。
             </p>
 
-            {/* ログイン & 紹介記事ボタン */}
-            <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3.5">
-              <button
-                onClick={() => signIn('google')}
-                className="w-full sm:w-auto flex items-center justify-center space-x-2 rounded-2xl bg-[var(--accent)] px-7 py-3.5 text-sm font-bold text-white shadow-lg shadow-[var(--accent)]/20 hover:opacity-90 transition active:scale-[0.98]"
-              >
-                <span>Googleアカウントでログイン</span>
-                <ArrowRight className="h-4 w-4" />
-              </button>
+            {/* ログインボタン群 */}
+            <div className="mt-10 flex flex-col items-center justify-center space-y-3 max-w-md mx-auto">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                {/* Google ログイン */}
+                <button
+                  onClick={() => signIn('google')}
+                  className="flex items-center justify-center space-x-2.5 rounded-2xl bg-[var(--accent)] px-5 py-3.5 text-sm font-bold text-white shadow-lg shadow-[var(--accent)]/20 hover:opacity-90 transition active:scale-[0.98]"
+                >
+                  <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                    <path d="M12.24 10.285V13.4h6.887C18.2 16.14 15.645 18 12.24 18c-3.315 0-6-2.685-6-6s2.685-6 6-6c1.53 0 2.925.57 4.005 1.515l2.4-2.4C16.995 3.525 14.775 2.7 12.24 2.7 7.08 2.7 2.91 6.87 2.91 12.03s4.17 9.33 9.33 9.33c5.385 0 8.955-3.795 8.955-9.12 0-.615-.06-1.215-.18-1.785H12.24z" />
+                  </svg>
+                  <span>Google でログイン</span>
+                </button>
 
+                {/* Microsoft (OneDrive) ログイン */}
+                <button
+                  onClick={() => signIn('azure-ad')}
+                  className="flex items-center justify-center space-x-2.5 rounded-2xl border border-blue-500/30 bg-blue-600/10 text-blue-500 dark:text-blue-400 hover:bg-blue-600/20 px-5 py-3.5 text-sm font-bold transition active:scale-[0.98] shadow-sm"
+                >
+                  <Cloud className="h-4 w-4" />
+                  <span>OneDrive でログイン</span>
+                </button>
+              </div>
+
+              {/* 紹介記事リンク */}
               <a
                 href={GUIDE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-full sm:w-auto flex items-center justify-center space-x-2 rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-bg)] px-6 py-3.5 text-sm font-bold text-[var(--accent)] hover:opacity-80 transition shadow-sm"
+                className="w-full flex items-center justify-center space-x-2 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] px-5 py-3 text-xs sm:text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm mt-2"
               >
-                <BookOpen className="h-4 w-4" />
+                <BookOpen className="h-4 w-4 text-[var(--accent)]" />
                 <span>紹介記事・使い方ガイドを見る</span>
-                <ExternalLink className="h-3.5 w-3.5 opacity-70" />
+                <ExternalLink className="h-3.5 w-3.5 opacity-60" />
               </a>
             </div>
 

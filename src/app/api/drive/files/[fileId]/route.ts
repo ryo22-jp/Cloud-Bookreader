@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import { getFileMetadata } from '@/lib/drive';
+import { getStorageProvider } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,8 @@ export async function GET(
       return NextResponse.json({ error: 'File ID is required' }, { status: 400 });
     }
 
-    const metadata = await getFileMetadata(session.accessToken, fileId);
+    const provider = getStorageProvider(session);
+    const metadata = await provider.getFileMetadata(fileId);
     return NextResponse.json(metadata);
   } catch (error: any) {
     console.error('API /api/drive/files/[fileId] error:', error);
