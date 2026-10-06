@@ -9,6 +9,10 @@ import { createClient } from 'webdav';
  */
 async function refreshGoogleAccessToken(token: any) {
   try {
+    if (!token.refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
     const url = 'https://oauth2.googleapis.com/token';
     const params = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID || '',
@@ -36,11 +40,14 @@ async function refreshGoogleAccessToken(token: any) {
       accessToken: refreshedTokens.access_token,
       accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+      error: undefined,
     };
   } catch (error) {
-    console.error('Error refreshing Google access token', error);
+    console.error('Error refreshing Google access token:', error);
     return {
       ...token,
+      accessToken: '',
+      accessTokenExpires: Date.now() + 60 * 1000,
       error: 'RefreshAccessTokenError',
     };
   }
@@ -51,6 +58,10 @@ async function refreshGoogleAccessToken(token: any) {
  */
 async function refreshMicrosoftAccessToken(token: any) {
   try {
+    if (!token.refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
     const tenant = process.env.AZURE_AD_TENANT_ID || 'common';
     const url = `https://login.microsoftonline.com/${tenant}/oauth2/v2.0/token`;
     const params = new URLSearchParams({
@@ -79,11 +90,14 @@ async function refreshMicrosoftAccessToken(token: any) {
       accessToken: refreshedTokens.access_token,
       accessTokenExpires: Date.now() + refreshedTokens.expires_in * 1000,
       refreshToken: refreshedTokens.refresh_token ?? token.refreshToken,
+      error: undefined,
     };
   } catch (error) {
-    console.error('Error refreshing Microsoft access token', error);
+    console.error('Error refreshing Microsoft access token:', error);
     return {
       ...token,
+      accessToken: '',
+      accessTokenExpires: Date.now() + 60 * 1000,
       error: 'RefreshAccessTokenError',
     };
   }
@@ -197,9 +211,10 @@ export const authOptions: NextAuthOptions = {
         return {
           accessToken: account.access_token,
           accessTokenExpires: Date.now() + (account.expires_in as number) * 1000,
-          refreshToken: account.refresh_token,
+          refreshToken: account.refresh_token ?? token.refreshToken,
           provider,
           user,
+          error: undefined,
         };
       }
 

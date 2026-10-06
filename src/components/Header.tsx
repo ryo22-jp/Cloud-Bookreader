@@ -33,6 +33,7 @@ export function Header({
 }: HeaderProps) {
   const { data: session } = useSession();
   const [searchInput, setSearchInput] = useState('');
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { theme, toggleTheme } = useUiTheme();
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -122,27 +123,80 @@ export function Header({
               </button>
             )}
 
-            {/* ユーザーアバター / ログアウト */}
-            <div className="flex items-center space-x-2 pl-2 border-l border-[var(--border-color)]">
-              {session.user?.image ? (
-                <img
-                  src={session.user.image}
-                  alt={session.user.name || 'User'}
-                  className="h-8 w-8 rounded-full border border-[var(--border-color)] object-cover shadow-sm"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-white text-xs font-semibold">
-                  <User className="h-4 w-4" />
-                </div>
-              )}
+            {/* ユーザーアバター（タップでメニュー） & ログアウト（モバイル常時対応） */}
+            <div className="relative flex items-center space-x-1.5 pl-2 border-l border-[var(--border-color)]">
               <button
-                onClick={() => signOut()}
+                type="button"
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center space-x-1 rounded-full p-0.5 hover:ring-2 hover:ring-[var(--accent)] transition focus:outline-none"
+                title="アカウントメニューを開く"
+                aria-label="アカウントメニュー"
+              >
+                {session.user?.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={session.user.name || 'User'}
+                    className="h-8 w-8 rounded-full border border-[var(--border-color)] object-cover shadow-sm"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)] text-white text-xs font-semibold">
+                    <User className="h-4 w-4" />
+                  </div>
+                )}
+              </button>
+
+              {/* 常時表示のログアウトボタン（スマホではアイコンのみ、PCではテキスト付き） */}
+              <button
+                type="button"
+                onClick={() => signOut({ callbackUrl: '/' })}
                 title="ログアウト"
-                className="hidden sm:flex items-center space-x-1 rounded-xl px-2.5 py-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-primary)] transition"
+                aria-label="ログアウト"
+                className="flex items-center space-x-1 rounded-xl px-2 py-1.5 text-xs text-[var(--text-muted)] hover:bg-[var(--bg-hover)] hover:text-rose-500 transition"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                <span>ログアウト</span>
+                <span className="hidden sm:inline">ログアウト</span>
               </button>
+
+              {/* ユーザードロップダウンメニュー */}
+              {isUserMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setIsUserMenuOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] p-3 shadow-xl backdrop-blur-md z-50">
+                    <div className="border-b border-[var(--border-color)] pb-2.5 mb-2 px-1">
+                      <p className="text-xs font-bold text-[var(--text-primary)] truncate">
+                        {session.user?.name || '接続中アカウント'}
+                      </p>
+                      {session.user?.email && (
+                        <p className="text-[11px] text-[var(--text-muted)] truncate">
+                          {session.user.email}
+                        </p>
+                      )}
+                      <div className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-bg)] text-[var(--accent)] border border-[var(--accent-border)]">
+                        {session.provider === 'webdav'
+                          ? '🏠 自宅NAS (WebDAV)'
+                          : session.provider === 'azure-ad'
+                          ? '🔵 OneDrive'
+                          : '🔴 Google ドライブ'}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsUserMenuOpen(false);
+                        signOut({ callbackUrl: '/' });
+                      }}
+                      className="w-full flex items-center space-x-2 rounded-xl px-3 py-2 text-xs font-bold text-rose-500 hover:bg-rose-500/10 transition"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span>ログアウトする</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </>
         ) : (

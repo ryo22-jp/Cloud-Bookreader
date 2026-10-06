@@ -9,8 +9,11 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || !session.accessToken || (session as any).error === 'RefreshAccessTokenError') {
+      return NextResponse.json(
+        { error: '認証の有効期限が切れました。再度ログインしてください。', isAuthError: true },
+        { status: 401 }
+      );
     }
 
     const provider = getStorageProvider(session);
@@ -18,9 +21,18 @@ export async function GET() {
     return NextResponse.json(config);
   } catch (error: any) {
     console.error('API GET /api/drive/config error:', error);
+    const isAuth =
+      /401|invalid authentication credentials|invalid_grant|unauthorized|token/i.test(
+        error.message || ''
+      );
     return NextResponse.json(
-      { error: error.message || 'Failed to get config' },
-      { status: 500 }
+      {
+        error: isAuth
+          ? '認証の有効期限が切れました。再度ログインしてください。'
+          : error.message || 'Failed to get config',
+        isAuthError: isAuth,
+      },
+      { status: isAuth ? 401 : 500 }
     );
   }
 }
@@ -28,8 +40,11 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || !session.accessToken || (session as any).error === 'RefreshAccessTokenError') {
+      return NextResponse.json(
+        { error: '認証の有効期限が切れました。再度ログインしてください。', isAuthError: true },
+        { status: 401 }
+      );
     }
 
     const body: AppConfig = await request.json();
@@ -42,9 +57,18 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('API POST /api/drive/config error:', error);
+    const isAuth =
+      /401|invalid authentication credentials|invalid_grant|unauthorized|token/i.test(
+        error.message || ''
+      );
     return NextResponse.json(
-      { error: error.message || 'Failed to save config' },
-      { status: 500 }
+      {
+        error: isAuth
+          ? '認証の有効期限が切れました。再度ログインしてください。'
+          : error.message || 'Failed to save config',
+        isAuthError: isAuth,
+      },
+      { status: isAuth ? 401 : 500 }
     );
   }
 }

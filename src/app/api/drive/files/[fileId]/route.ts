@@ -11,8 +11,11 @@ export async function GET(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || !session.accessToken) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!session || !session.accessToken || (session as any).error === 'RefreshAccessTokenError') {
+      return NextResponse.json(
+        { error: '認証の有効期限が切れました。再度ログインしてください。', isAuthError: true },
+        { status: 401 }
+      );
     }
 
     const { fileId } = params;
@@ -25,9 +28,18 @@ export async function GET(
     return NextResponse.json(metadata);
   } catch (error: any) {
     console.error('API /api/drive/files/[fileId] error:', error);
+    const isAuth =
+      /401|invalid authentication credentials|invalid_grant|unauthorized|token/i.test(
+        error.message || ''
+      );
     return NextResponse.json(
-      { error: error.message || 'Failed to fetch file metadata' },
-      { status: 500 }
+      {
+        error: isAuth
+          ? '認証の有効期限が切れました。再度ログインしてください。'
+          : error.message || 'Failed to fetch file metadata',
+        isAuthError: isAuth,
+      },
+      { status: isAuth ? 401 : 500 }
     );
   }
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
+import { useSession, signIn, signOut } from 'next-auth/react';
 import {
   Folder,
   ChevronRight,
@@ -16,6 +16,9 @@ import {
   FolderSearch,
   HardDriveDownload,
   Trash2,
+  Lock,
+  LogOut,
+  RefreshCw,
 } from 'lucide-react';
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 import { FileCard } from './FileCard';
@@ -35,6 +38,7 @@ import {
 import { openFolderPicker } from '@/lib/picker';
 import { OneDriveFolderPickerModal } from './OneDriveFolderPickerModal';
 import { WebDAVFolderPickerModal } from './WebDAVFolderPickerModal';
+import { WebDAVConnectModal } from './WebDAVConnectModal';
 
 interface FolderBreadcrumb {
   id: string;
@@ -67,6 +71,9 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const [currentFolderId, setCurrentFolderId] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthError, setIsAuthError] = useState<boolean>(false);
+  const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
+  const [isWebDAVConnectModalOpen, setIsWebDAVConnectModalOpen] = useState<boolean>(false);
   const [isPickerOpening, setIsPickerOpening] = useState<boolean>(false);
   const [isOneDrivePickerOpen, setIsOneDrivePickerOpen] = useState<boolean>(false);
   const [isWebDAVPickerOpen, setIsWebDAVPickerOpen] = useState<boolean>(false);
@@ -151,8 +158,17 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   // ファイル一覧および進捗・表紙の取得
   const fetchData = useCallback(async () => {
     if (!session || !currentFolderId) return;
+
+    if (session.error === 'RefreshAccessTokenError') {
+      setIsAuthError(true);
+      setError('クラウドストレージとの接続の有効期限が切れました。再度ログインしてください。');
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    setIsAuthError(false);
 
     try {
       // 1. ファイル一覧取得
@@ -166,7 +182,16 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       const res = await fetch(`/api/drive/files?${params.toString()}`);
       if (!res.ok) {
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error || 'ファイルの取得に失敗しました');
+        const rawMsg = errData.error || '';
+        const isAuth =
+          res.status === 401 ||
+          errData.isAuthError ||
+          /401|invalid authentication credentials|invalid_grant|unauthorized|token/i.test(rawMsg);
+        if (isAuth) {
+          setIsAuthError(true);
+          throw new Error('クラウドストレージとの接続の有効期限が切れました。再度ログインしてください。');
+        }
+        throw new Error(rawMsg || 'ファイルの取得に失敗しました');
       }
       const data = await res.json();
       const loadedFiles: DriveFile[] = data.files || [];
@@ -215,11 +240,38 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       setCoverMap(mergedCovers);
     } catch (err: any) {
       console.error(err);
-      setError(err.message || 'エラーが発生しました');
+      const rawMsg = err.message || '';
+      const isAuth =
+        isAuthError ||
+        /401|invalid authentication credentials|invalid_grant|unauthorized|token/i.test(rawMsg);
+      if (isAuth) {
+        setIsAuthError(true);
+        setError('クラウドストレージとの接続の有効期限が切れました。再度ログインしてください。');
+      } else {
+        setError(rawMsg || 'エラーが発生しました');
+      }
     } finally {
       setIsLoading(false);
     }
-  }, [session, currentFolderId, searchQuery]);
+  }, [session, currentFolderId, searchQuery, isAuthError]);
+
+  // クラウド再接続ハンドラー
+  const handleReconnect = async () => {
+    setIsReconnecting(true);
+    try {
+      if (session?.provider === 'webdav') {
+        setIsWebDAVConnectModalOpen(true);
+      } else if (session?.provider === 'azure-ad') {
+        await signIn('azure-ad', { callbackUrl: '/' });
+      } else {
+        await signIn('google', { callbackUrl: '/' });
+      }
+    } catch (e) {
+      console.error('Reconnect failed:', e);
+    } finally {
+      setIsReconnecting(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -704,7 +756,44 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       </div>
 
       {/* エラー表示 */}
-      {error && (
+      {error && isAuthError ? (
+        <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center text-rose-500 mb-6 shadow-sm">
+          <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-rose-500/20 text-rose-500 mb-3">
+            <Lock className="h-6 w-6" />
+          </div>
+          <h3 className="font-bold text-base text-[var(--text-primary)]">
+            クラウドストレージとの接続の有効期限が切れました
+          </h3>
+          <p className="mt-1.5 text-xs text-[var(--text-muted)] max-w-md mx-auto leading-relaxed">
+            長期間アクセスがなかったため、セキュリティ保護により接続が切断されました。<br className="hidden sm:inline" />
+            下のボタンから再接続するか、一度ログアウトしてください。
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+            <button
+              onClick={handleReconnect}
+              disabled={isReconnecting}
+              className="flex items-center space-x-2 rounded-xl bg-[var(--accent)] px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-[var(--accent)]/20 hover:opacity-90 transition active:scale-95 disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isReconnecting ? 'animate-spin' : ''}`} />
+              <span>
+                {session?.provider === 'webdav'
+                  ? '自宅NASに再接続'
+                  : session?.provider === 'azure-ad'
+                  ? 'OneDriveで再ログイン'
+                  : 'Googleで再ログイン'}
+              </span>
+            </button>
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="flex items-center space-x-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] px-4 py-2.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-rose-500 hover:border-rose-500/40 transition active:scale-95 shadow-sm"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>ログアウトして戻る</span>
+            </button>
+          </div>
+        </div>
+      ) : error ? (
         <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 p-6 text-center text-rose-500 mb-6">
           <p className="font-semibold text-sm">{error}</p>
           <button
@@ -714,7 +803,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
             再試行
           </button>
         </div>
-      )}
+      ) : null}
 
       {/* ローディング */}
       {isLoading ? (
@@ -722,7 +811,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
           <Loader2 className="h-8 w-8 animate-spin text-[var(--accent)]" />
           <p className="text-xs text-[var(--text-muted)]">本棚を読み込み中...</p>
         </div>
-      ) : sortedBookFiles.length === 0 && folderFiles.length === 0 ? (
+      ) : !error && sortedBookFiles.length === 0 && folderFiles.length === 0 ? (
         /* 空状態（本棚フォルダ選択へのスマートな誘導） */
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-card)]/50 py-16 px-4 text-center">
           <FolderOpen className="h-12 w-12 text-[var(--accent)] mb-3 opacity-80" />
@@ -782,6 +871,12 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
         isOpen={isWebDAVPickerOpen}
         onClose={() => setIsWebDAVPickerOpen(false)}
         onSelectFolder={applySelectedFolder}
+      />
+
+      {/* 自宅NAS (WebDAV) 再接続モーダル */}
+      <WebDAVConnectModal
+        isOpen={isWebDAVConnectModalOpen}
+        onClose={() => setIsWebDAVConnectModalOpen(false)}
       />
     </div>
   );
