@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { ViewerSettings, BookProgress } from '@/types';
 import { ReaderControls } from './ReaderControls';
 import { saveLocalProgress, saveViewerSettings, saveCoverImage, getCoverImage, getOfflineBookBlob } from '@/lib/storage';
+import { AdjacentBookInfo } from '@/lib/local-files';
 import { Loader2 } from 'lucide-react';
 
 interface PdfViewerProps {
@@ -11,6 +12,8 @@ interface PdfViewerProps {
   fileName: string;
   initialPage?: number;
   initialSettings: ViewerSettings;
+  prevBook?: AdjacentBookInfo | null;
+  nextBook?: AdjacentBookInfo | null;
 }
 
 export function PdfViewer({
@@ -18,6 +21,8 @@ export function PdfViewer({
   fileName,
   initialPage = 1,
   initialSettings,
+  prevBook = null,
+  nextBook = null,
 }: PdfViewerProps) {
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
   const [totalPages, setTotalPages] = useState<number>(0);
@@ -261,11 +266,13 @@ export function PdfViewer({
       };
 
       saveLocalProgress(progress);
-      fetch('/api/drive/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(progress),
-      }).catch(() => {});
+      if (!fileId.startsWith('local_')) {
+        fetch('/api/drive/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(progress),
+        }).catch(() => {});
+      }
     };
 
     saveProgressAsync();
@@ -359,6 +366,7 @@ export function PdfViewer({
   });
 
   const visiblePages = getVisiblePages(currentPage);
+  const isAtLastPage = totalPages > 0 && visiblePages.includes(totalPages);
 
   return (
     <div
@@ -373,6 +381,9 @@ export function PdfViewer({
         isVisible={isControlsVisible}
         settings={settings}
         fileType="pdf"
+        prevBook={prevBook}
+        nextBook={nextBook}
+        isAtLastPage={isAtLastPage}
         onPageChange={handlePageChange}
         onSettingsChange={(newSettings) => {
           setSettings(newSettings);

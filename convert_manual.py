@@ -168,9 +168,7 @@ def add_formatted_text(paragraph, text):
             paragraph.add_run(token)
 
 if __name__ == '__main__':
-    md_file = r"C:\Users\ryoma\.gemini\antigravity\brain\69d3f3d0-55d2-4d4a-abf0-7fc63da13177\app_introduction_and_manual.md"
+    md_file = r"D:\antigravity2\Cloud-Bookreader\MANUAL.md"
     docx_file1 = r"D:\antigravity2\Cloud-Bookreader\Cloud_BookReader_Manual.docx"
-    docx_file2 = r"C:\Users\ryoma\.gemini\antigravity\brain\69d3f3d0-55d2-4d4a-abf0-7fc63da13177\Cloud_BookReader_Manual.docx"
     
     convert_md_to_docx(md_file, docx_file1)
-    convert_md_to_docx(md_file, docx_file2)

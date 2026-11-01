@@ -8,6 +8,11 @@ import { PdfViewer } from '@/components/Reader/PdfViewer';
 import { ZipViewer } from '@/components/Reader/ZipViewer';
 import { EpubViewer } from '@/components/Reader/EpubViewer';
 import { getLocalProgress, getViewerSettings } from '@/lib/storage';
+import {
+  getLocalFileMetadata,
+  resolveAdjacentBooks,
+  AdjacentBookInfo,
+} from '@/lib/local-files';
 import { Loader2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
@@ -17,20 +22,25 @@ export default function ReaderPage() {
   const router = useRouter();
   const { data: session, status } = useSession();
   const fileId = params?.fileId as string;
+  const isLocalFile = Boolean(fileId && fileId.startsWith('local_'));
 
   const [fileMetadata, setFileMetadata] = useState<DriveFile | null>(null);
   const [initialProgress, setInitialProgress] = useState<BookProgress | null>(null);
   const [settings, setSettings] = useState<ViewerSettings>(DEFAULT_VIEWER_SETTINGS);
+  const [prevBook, setPrevBook] = useState<AdjacentBookInfo | null>(null);
+  const [nextBook, setNextBook] = useState<AdjacentBookInfo | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (!fileId) return;
+
+    if (status === 'unauthenticated' && !isLocalFile) {
       router.push('/');
       return;
     }
 
-    if (!session || !fileId) return;
+    if (!isLocalFile && !session) return;
 
     async function initReader() {
       setIsLoading(true);
@@ -48,19 +58,30 @@ export default function ReaderPage() {
 
         let fileName = queryName || localProg?.fileName || '';
         let fileType: DriveFile['fileType'] = 'pdf';
+        let parentFolderId: string | undefined;
 
-        // メタデータAPIからファイル詳細を取得
-        try {
-          const metaRes = await fetch(`/api/drive/files/${fileId}`);
-          if (metaRes.ok) {
-            const meta: DriveFile = await metaRes.json();
-            if (meta && meta.name) {
-              fileName = meta.name;
-              fileType = meta.fileType;
-            }
+        if (isLocalFile) {
+          const localMeta = await getLocalFileMetadata(fileId);
+          if (localMeta) {
+            fileName = localMeta.name;
+            fileType = localMeta.fileType;
+            parentFolderId = localMeta.parents?.[0];
           }
-        } catch (e) {
-          console.warn('Failed to fetch detailed metadata, falling back:', e);
+        } else {
+          // メタデータAPIからファイル詳細を取得
+          try {
+            const metaRes = await fetch(`/api/drive/files/${fileId}`);
+            if (metaRes.ok) {
+              const meta: DriveFile = await metaRes.json();
+              if (meta && meta.name) {
+                fileName = meta.name;
+                fileType = meta.fileType;
+                parentFolderId = meta.parents?.[0];
+              }
+            }
+          } catch (e) {
+            console.warn('Failed to fetch detailed metadata, falling back:', e);
+          }
         }
 
         // ファイル名の拡張子からタイプをフォールバック判定
@@ -77,7 +98,16 @@ export default function ReaderPage() {
           mimeType: '',
           fileType,
           isFolder: false,
+          parents: parentFolderId ? [parentFolderId] : undefined,
         });
+
+        // 連続読書用の前後巻を取得
+        resolveAdjacentBooks(fileId, parentFolderId)
+          .then(({ prevBook: prev, nextBook: next }) => {
+            setPrevBook(prev);
+            setNextBook(next);
+          })
+          .catch(() => {});
 
         setIsLoading(false);
       } catch (err: any) {
@@ -88,9 +118,9 @@ export default function ReaderPage() {
     }
 
     initReader();
-  }, [session, status, fileId, searchParams, router]);
+  }, [session, status, fileId, isLocalFile, searchParams, router]);
 
-  if (isLoading || status === 'loading') {
+  if (isLoading || (status === 'loading' && !isLocalFile)) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center bg-slate-950 text-slate-100 space-y-4">
         <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
@@ -119,10 +149,13 @@ export default function ReaderPage() {
   if (fileMetadata.fileType === 'pdf') {
     return (
       <PdfViewer
+        key={fileId}
         fileId={fileId}
         fileName={fileMetadata.name}
         initialPage={initialProgress?.currentPage || 1}
         initialSettings={settings}
+        prevBook={prevBook}
+        nextBook={nextBook}
       />
     );
   }
@@ -130,11 +163,14 @@ export default function ReaderPage() {
   if (fileMetadata.fileType === 'zip' || fileMetadata.fileType === 'cbz') {
     return (
       <ZipViewer
+        key={fileId}
         fileId={fileId}
         fileName={fileMetadata.name}
         fileType={fileMetadata.fileType}
         initialPage={initialProgress?.currentPage || 1}
         initialSettings={settings}
+        prevBook={prevBook}
+        nextBook={nextBook}
       />
     );
   }
@@ -142,10 +178,13 @@ export default function ReaderPage() {
   if (fileMetadata.fileType === 'epub') {
     return (
       <EpubViewer
+        key={fileId}
         fileId={fileId}
         fileName={fileMetadata.name}
         initialCfi={initialProgress?.epubCfi}
         initialSettings={settings}
+        prevBook={prevBook}
+        nextBook={nextBook}
       />
     );
   }

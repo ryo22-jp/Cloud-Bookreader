@@ -1,5 +1,6 @@
 import { get, set, del, keys } from 'idb-keyval';
 import { BookProgress, ViewerSettings, DEFAULT_VIEWER_SETTINGS, AppConfig } from '@/types';
+import { getLocalFileBlob } from './local-files';
 
 const PROGRESS_PREFIX = 'progress_';
 const COVER_PREFIX = 'cover_';
@@ -202,10 +203,14 @@ export async function saveOfflineBook(
 }
 
 /**
- * 指定ファイルのオフラインBlobデータを取得
+ * 指定ファイルのオフラインBlobデータを取得（ローカル閲覧モードのBlobにも対応）
  */
 export async function getOfflineBookBlob(fileId: string): Promise<Blob | null> {
   try {
+    if (fileId.startsWith('local_')) {
+      const localBlob = await getLocalFileBlob(fileId);
+      if (localBlob) return localBlob;
+    }
     const data = await get<{ blob: Blob }>(`${OFFLINE_PREFIX}${fileId}`);
     return data?.blob || null;
   } catch (err) {

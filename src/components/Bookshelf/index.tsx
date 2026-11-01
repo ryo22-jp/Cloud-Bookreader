@@ -39,6 +39,16 @@ import { openFolderPicker } from '@/lib/picker';
 import { OneDriveFolderPickerModal } from './OneDriveFolderPickerModal';
 import { WebDAVFolderPickerModal } from './WebDAVFolderPickerModal';
 import { WebDAVConnectModal } from './WebDAVConnectModal';
+import { NextcloudFolderPickerModal } from './NextcloudFolderPickerModal';
+import { NextcloudConnectModal } from './NextcloudConnectModal';
+import { DropboxFolderPickerModal } from './DropboxFolderPickerModal';
+import { DropboxConnectModal } from './DropboxConnectModal';
+import { LocalFileModal } from './LocalFileModal';
+import {
+  listLocalFiles,
+  getLocalRootName,
+  saveCurrentFolderBooks,
+} from '@/lib/local-files';
 
 interface FolderBreadcrumb {
   id: string;
@@ -48,6 +58,8 @@ interface FolderBreadcrumb {
 interface BookshelfProps {
   searchQuery: string;
   refreshTrigger: number;
+  isLocalMode?: boolean;
+  onExitLocalMode?: () => void;
 }
 
 const MAX_RECENT_BOOKS = 5; // 続きから読むの最大表示件数
@@ -63,7 +75,12 @@ function formatBytes(bytes?: number, decimals = 1) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
 
-export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
+export function Bookshelf({
+  searchQuery,
+  refreshTrigger,
+  isLocalMode = false,
+  onExitLocalMode,
+}: BookshelfProps) {
   const { data: session } = useSession();
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [appConfig, setAppConfig] = useState<AppConfig>({});
@@ -74,9 +91,14 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   const [isAuthError, setIsAuthError] = useState<boolean>(false);
   const [isReconnecting, setIsReconnecting] = useState<boolean>(false);
   const [isWebDAVConnectModalOpen, setIsWebDAVConnectModalOpen] = useState<boolean>(false);
+  const [isNextcloudConnectModalOpen, setIsNextcloudConnectModalOpen] = useState<boolean>(false);
+  const [isDropboxConnectModalOpen, setIsDropboxConnectModalOpen] = useState<boolean>(false);
+  const [isLocalFileModalOpen, setIsLocalFileModalOpen] = useState<boolean>(false);
   const [isPickerOpening, setIsPickerOpening] = useState<boolean>(false);
   const [isOneDrivePickerOpen, setIsOneDrivePickerOpen] = useState<boolean>(false);
+  const [isDropboxPickerOpen, setIsDropboxPickerOpen] = useState<boolean>(false);
   const [isWebDAVPickerOpen, setIsWebDAVPickerOpen] = useState<boolean>(false);
+  const [isNextcloudPickerOpen, setIsNextcloudPickerOpen] = useState<boolean>(false);
 
   // 進捗データ & 表紙キャッシュ
   const [progressMap, setProgressMap] = useState<Record<string, BookProgress>>({});
@@ -101,6 +123,18 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
   // 初期設定（保存されたルートフォルダ設定や直前のフォルダ階層）の読み込み
   useEffect(() => {
     async function initConfig() {
+      await refreshOfflineBooks();
+
+      if (isLocalMode) {
+        const localRoot = await getLocalRootName();
+        setCurrentFolderId('root');
+        const initialCrumbs = [{ id: 'root', name: localRoot }];
+        setBreadcrumbs(initialCrumbs);
+        sessionStorage.setItem(LAST_FOLDER_ID_KEY, 'root');
+        sessionStorage.setItem(LAST_BREADCRUMBS_KEY, JSON.stringify(initialCrumbs));
+        return;
+      }
+
       let cfg = await getLocalAppConfig();
 
       try {
@@ -117,13 +151,12 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       }
 
       setAppConfig(cfg);
-      await refreshOfflineBooks();
 
       // 直前に開いていたフォルダ階層がsessionStorageにあれば復元
       const savedFolderId = sessionStorage.getItem(LAST_FOLDER_ID_KEY);
       const savedCrumbs = sessionStorage.getItem(LAST_BREADCRUMBS_KEY);
 
-      if (savedFolderId && savedCrumbs) {
+      if (savedFolderId && savedCrumbs && !savedFolderId.startsWith('local_')) {
         try {
           const parsedCrumbs = JSON.parse(savedCrumbs);
           setCurrentFolderId(savedFolderId);
@@ -142,24 +175,58 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
         sessionStorage.setItem(LAST_FOLDER_ID_KEY, cfg.rootFolderId);
         sessionStorage.setItem(LAST_BREADCRUMBS_KEY, JSON.stringify(initialCrumbs));
       } else {
+        const defaultName =
+          session?.provider === 'webdav'
+            ? '自宅NAS'
+            : session?.provider === 'nextcloud'
+            ? 'Nextcloud'
+            : session?.provider === 'dropbox'
+            ? 'Dropbox'
+            : session?.provider === 'azure-ad'
+            ? 'OneDrive'
+            : 'Googleドライブ';
         setCurrentFolderId('root');
-        const initialCrumbs = [{ id: 'root', name: 'Googleドライブ' }];
+        const initialCrumbs = [{ id: 'root', name: defaultName }];
         setBreadcrumbs(initialCrumbs);
         sessionStorage.setItem(LAST_FOLDER_ID_KEY, 'root');
         sessionStorage.setItem(LAST_BREADCRUMBS_KEY, JSON.stringify(initialCrumbs));
       }
     }
 
-    if (session) {
+    if (session || isLocalMode) {
       initConfig();
     }
-  }, [session, refreshOfflineBooks]);
+  }, [session, isLocalMode, refreshOfflineBooks]);
 
   // ファイル一覧および進捗・表紙の取得
   const fetchData = useCallback(async () => {
-    if (!session || !currentFolderId) return;
+    if ((!session && !isLocalMode) || !currentFolderId) return;
 
-    if (session.error === 'RefreshAccessTokenError') {
+    if (isLocalMode) {
+      setIsLoading(true);
+      setError(null);
+      setIsAuthError(false);
+      try {
+        const localResult = await listLocalFiles(currentFolderId, searchQuery);
+        const loadedFiles = localResult.files || [];
+        setFiles(loadedFiles);
+        saveCurrentFolderBooks(loadedFiles);
+
+        const [localProgress, localCovers] = await Promise.all([
+          getAllLocalProgress(),
+          getAllCoverImages(),
+        ]);
+        setProgressMap(localProgress);
+        setCoverMap(localCovers);
+      } catch (err: any) {
+        setError(err.message || 'ローカルファイルの取得に失敗しました');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    if (session?.error === 'RefreshAccessTokenError') {
       setIsAuthError(true);
       setError('クラウドストレージとの接続の有効期限が切れました。再度ログインしてください。');
       setIsLoading(false);
@@ -196,6 +263,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       const data = await res.json();
       const loadedFiles: DriveFile[] = data.files || [];
       setFiles(loadedFiles);
+      saveCurrentFolderBooks(loadedFiles);
 
       // 2. ローカル進捗・表紙とクラウド進捗を取得
       const [localProgress, localCovers] = await Promise.all([
@@ -253,7 +321,7 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [session, currentFolderId, searchQuery, isAuthError]);
+  }, [session, isLocalMode, currentFolderId, searchQuery, isAuthError]);
 
   // クラウド再接続ハンドラー
   const handleReconnect = async () => {
@@ -261,6 +329,10 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
     try {
       if (session?.provider === 'webdav') {
         setIsWebDAVConnectModalOpen(true);
+      } else if (session?.provider === 'nextcloud') {
+        setIsNextcloudConnectModalOpen(true);
+      } else if (session?.provider === 'dropbox') {
+        setIsDropboxConnectModalOpen(true);
       } else if (session?.provider === 'azure-ad') {
         await signIn('azure-ad', { callbackUrl: '/' });
       } else {
@@ -387,10 +459,25 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
 
   // 本棚フォルダ選択（プロバイダー別）
   const handleOpenPicker = async () => {
+    if (isLocalMode) {
+      setIsLocalFileModalOpen(true);
+      return;
+    }
+
     if (!session?.accessToken) return;
 
     if (session.provider === 'webdav') {
       setIsWebDAVPickerOpen(true);
+      return;
+    }
+
+    if (session.provider === 'nextcloud') {
+      setIsNextcloudPickerOpen(true);
+      return;
+    }
+
+    if (session.provider === 'dropbox') {
+      setIsDropboxPickerOpen(true);
       return;
     }
 
@@ -468,7 +555,17 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       body: JSON.stringify(newConfig),
     }).catch(console.error);
 
-    const initialCrumbs = [{ id: 'root', name: 'Googleドライブ' }];
+    const defaultRootName =
+      session?.provider === 'webdav'
+        ? '自宅NAS'
+        : session?.provider === 'nextcloud'
+        ? 'Nextcloud'
+        : session?.provider === 'dropbox'
+        ? 'Dropbox'
+        : session?.provider === 'azure-ad'
+        ? 'OneDrive'
+        : 'Googleドライブ';
+    const initialCrumbs = [{ id: 'root', name: defaultRootName }];
     setCurrentFolderId('root');
     setBreadcrumbs(initialCrumbs);
     sessionStorage.setItem(LAST_FOLDER_ID_KEY, 'root');
@@ -514,7 +611,13 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
 
   // 最近読んだ本リスト（最大5件、読了98%未満）
   const recentBooks = Object.values(progressMap)
-    .filter((p) => p.percentage < 98)
+    .filter((p) => {
+      if (p.percentage >= 98) return false;
+      if (isLocalMode) {
+        return p.fileId.startsWith('local_') && files.some((f) => f.id === p.fileId);
+      }
+      return !p.fileId.startsWith('local_');
+    })
     .sort((a, b) => new Date(b.lastReadTime).getTime() - new Date(a.lastReadTime).getTime())
     .slice(0, MAX_RECENT_BOOKS);
 
@@ -618,28 +721,34 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
               })}
             </nav>
 
-            {/* 本棚フォルダ選択（Google Picker） & 固定コントロール */}
+            {/* 本棚フォルダ選択 & 固定コントロール */}
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleOpenPicker}
                 disabled={isPickerOpening}
                 className="flex items-center space-x-1.5 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-[var(--accent)] hover:border-[var(--accent)] transition shadow-sm disabled:opacity-50"
-                title="Googleドライブから本棚にするフォルダを直接選択"
+                title="本棚にするフォルダやファイルを選択"
               >
                 <FolderSearch className="h-3.5 w-3.5 text-[var(--accent)]" />
-                <span>{appConfig.rootFolderId ? '本棚フォルダ変更' : '本棚フォルダ選択'}</span>
+                <span>
+                  {isLocalMode
+                    ? 'ファイル・フォルダを変更'
+                    : appConfig.rootFolderId
+                    ? '本棚フォルダ変更'
+                    : '本棚フォルダ選択'}
+                </span>
               </button>
 
-              {appConfig.rootFolderId ? (
+              {!isLocalMode && appConfig.rootFolderId ? (
                 <button
                   onClick={handleUnpinFolder}
                   className="flex items-center space-x-1.5 rounded-2xl border border-[var(--accent-border)] bg-[var(--accent-bg)] px-3 py-1.5 text-xs font-semibold text-[var(--accent)] hover:opacity-80 transition shadow-sm"
-                  title="クリックしてGoogleドライブ全体の表示に戻す"
+                  title="クリックして全体の表示に戻す"
                 >
                   <Pin className="h-3.5 w-3.5 fill-[var(--accent)]" />
                   <span>固定解除</span>
                 </button>
-              ) : currentFolderId !== 'root' && currentFolderId !== '' ? (
+              ) : !isLocalMode && currentFolderId !== 'root' && currentFolderId !== '' ? (
                 <button
                   onClick={handlePinFolder}
                   className="flex items-center space-x-1.5 rounded-2xl border border-[var(--border-color)] bg-[var(--bg-card)] px-3 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:border-[var(--accent)] hover:text-[var(--accent)] transition shadow-sm"
@@ -779,6 +888,10 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
               <span>
                 {session?.provider === 'webdav'
                   ? '自宅NASに再接続'
+                  : session?.provider === 'nextcloud'
+                  ? 'Nextcloudに再接続'
+                  : session?.provider === 'dropbox'
+                  ? 'Dropboxに再接続'
                   : session?.provider === 'azure-ad'
                   ? 'OneDriveで再ログイン'
                   : 'Googleで再ログイン'}
@@ -816,14 +929,24 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
         <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-[var(--border-color)] bg-[var(--bg-card)]/50 py-16 px-4 text-center">
           <FolderOpen className="h-12 w-12 text-[var(--accent)] mb-3 opacity-80" />
           <h3 className="text-base font-bold text-[var(--text-primary)]">
-            本棚にするフォルダを選択してください
+            {isLocalMode
+              ? '端末内の書籍ファイルまたはフォルダを選択してください'
+              : '本棚にするフォルダを選択してください'}
           </h3>
           <p className="mt-1.5 text-xs text-[var(--text-muted)] max-w-sm leading-relaxed">
-            {session?.provider === 'webdav'
-              ? '自宅NAS'
-              : session?.provider === 'azure-ad'
-              ? 'OneDrive'
-              : 'Googleドライブ'}内のマンガや自炊書籍が入ったフォルダを選択すると、本棚に本が並びます。
+            {isLocalMode
+              ? 'PCやスマートフォン内のマンガ・書籍ファイル（PDF / ZIP / CBZ / EPUB）またはフォルダを選択すると本棚に並びます。'
+              : `${
+                  session?.provider === 'webdav'
+                    ? '自宅NAS'
+                    : session?.provider === 'nextcloud'
+                    ? 'Nextcloud'
+                    : session?.provider === 'dropbox'
+                    ? 'Dropbox'
+                    : session?.provider === 'azure-ad'
+                    ? 'OneDrive'
+                    : 'Googleドライブ'
+                }内のマンガや自炊書籍が入ったフォルダを選択すると、本棚に本が並びます。`}
           </p>
           <button
             onClick={handleOpenPicker}
@@ -832,8 +955,14 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
           >
             <FolderSearch className="h-4 w-4" />
             <span>
-              {session?.provider === 'webdav'
+              {isLocalMode
+                ? '端末からファイル・フォルダを選択'
+                : session?.provider === 'webdav'
                 ? '自宅NASから本棚フォルダを選択'
+                : session?.provider === 'nextcloud'
+                ? 'Nextcloudから本棚フォルダを選択'
+                : session?.provider === 'dropbox'
+                ? 'Dropboxから本棚フォルダを選択'
                 : session?.provider === 'azure-ad'
                 ? 'OneDriveから本棚フォルダを選択'
                 : 'Googleドライブから本棚フォルダを選択'}
@@ -849,10 +978,10 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
               file={file}
               progress={progressMap[file.id]}
               coverUrl={coverMap[file.id]}
-              isDownloaded={downloadedSet.has(file.id)}
+              isDownloaded={!isLocalMode && downloadedSet.has(file.id)}
               downloadProgress={downloadingMap[file.id]}
-              onDownload={handleDownloadBook}
-              onDeleteDownload={handleDeleteDownload}
+              onDownload={isLocalMode ? undefined : handleDownloadBook}
+              onDeleteDownload={isLocalMode ? undefined : handleDeleteDownload}
               viewMode="list"
             />
           ))}
@@ -866,6 +995,32 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
         onSelectFolder={applySelectedFolder}
       />
 
+      {/* Dropbox用フォルダ選択モーダル */}
+      <DropboxFolderPickerModal
+        isOpen={isDropboxPickerOpen}
+        onClose={() => setIsDropboxPickerOpen(false)}
+        onSelectFolder={applySelectedFolder}
+      />
+
+      {/* Dropbox 再接続モーダル */}
+      <DropboxConnectModal
+        isOpen={isDropboxConnectModalOpen}
+        onClose={() => setIsDropboxConnectModalOpen(false)}
+      />
+
+      {/* Nextcloud用フォルダ選択モーダル */}
+      <NextcloudFolderPickerModal
+        isOpen={isNextcloudPickerOpen}
+        onClose={() => setIsNextcloudPickerOpen(false)}
+        onSelectFolder={applySelectedFolder}
+      />
+
+      {/* Nextcloud 再接続モーダル */}
+      <NextcloudConnectModal
+        isOpen={isNextcloudConnectModalOpen}
+        onClose={() => setIsNextcloudConnectModalOpen(false)}
+      />
+
       {/* 自宅NAS (WebDAV) 用フォルダ選択モーダル */}
       <WebDAVFolderPickerModal
         isOpen={isWebDAVPickerOpen}
@@ -877,6 +1032,18 @@ export function Bookshelf({ searchQuery, refreshTrigger }: BookshelfProps) {
       <WebDAVConnectModal
         isOpen={isWebDAVConnectModalOpen}
         onClose={() => setIsWebDAVConnectModalOpen(false)}
+      />
+
+      {/* ローカルファイル・フォルダ選択モーダル */}
+      <LocalFileModal
+        isOpen={isLocalFileModalOpen}
+        onClose={() => setIsLocalFileModalOpen(false)}
+        onFilesImported={async () => {
+          const localRoot = await getLocalRootName();
+          setCurrentFolderId('root');
+          setBreadcrumbs([{ id: 'root', name: localRoot }]);
+          fetchData();
+        }}
       />
     </div>
   );

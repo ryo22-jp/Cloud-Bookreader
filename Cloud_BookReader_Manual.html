@@ -22,15 +22,16 @@
     .warning-box { background: #fffbeb; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 20px 0; }
     .trust-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px; margin: 20px 0; }
     .step-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin: 16px 0; }
+    .info-box { background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 12px; padding: 16px; margin: 16px 0; }
     table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
     th, td { border: 1px solid #e2e8f0; padding: 10px; text-align: left; }
     th { background: #f1f5f9; }
   </style>
 </head>
 <body>
-  <h1>【完全無料・マルチクラウド対応】Google Drive / OneDrive / 自宅NASの自炊本を全デバイスで爆速ストリーミング！「Cloud BookReader」導入＆操作マニュアル</h1>
+  <h1>【完全無料・マルチクラウド対応】Google Drive / OneDrive / Nextcloud / 自宅NASの自炊本を全デバイスで爆速ストリーミング！「Cloud BookReader」導入＆操作マニュアル</h1>
   
-  <p>Google Drive、Microsoft OneDrive、およびご自宅のNAS（Synology、QNAP、Nextcloud等）に保存してある自炊マンガや電子書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・端末の容量消費ゼロ</strong> で快適に読めるクラウドWebリーダー <strong>「Cloud BookReader」</strong> のご紹介です。</p>
+  <p>Google Drive、Microsoft OneDrive、Nextcloud、およびご自宅のNAS（Synology、QNAP等）に保存してある自炊マンガや電子書籍（PDF / ZIP / CBZ / EPUB）を、<strong>ダウンロード待ち時間ゼロ・端末の容量消費ゼロ</strong> で快適に読めるクラウドWebリーダー <strong>「Cloud BookReader」</strong> のご紹介です。</p>
   <p>スマートフォン、タブレット、PCなどあらゆるデバイスに対応し、<strong>「PCで読んだ続きを、外出先のスマホで1秒で再開」</strong> できます。</p>
 
   <div class="btn-box">
@@ -44,6 +45,7 @@
     <tr><th>ストレージ</th><th>おすすめユーザー</th><th>特徴</th></tr>
     <tr><td><strong>🔴 Google Drive</strong></td><td>すべてのGoogleユーザー</td><td>アプリ設定・しおりを専用隠し領域に自動同期</td></tr>
     <tr><td><strong>🔵 Microsoft OneDrive</strong></td><td>Microsoft 365 ユーザー</td><td>1TBの大容量をフル活用。Graph API による爆速ストリーミング</td></tr>
+    <tr><td><strong>☁️ Nextcloud</strong></td><td>プライベートクラウド愛用者</td><td>セルフホスト対応。WebDAV経由で安全に直結、アプリパスワード対応</td></tr>
     <tr><td><strong>🏠 自宅NAS (WebDAV)</strong></td><td>自炊ヘビーユーザー</td><td>Synology / QNAP 等のテラバイト級ハードディスクに直結。容量無制限</td></tr>
   </table>
 
@@ -60,6 +62,37 @@
     </ol>
   </div>
 
+  <h2>☁️ Nextcloud の設定・接続手順</h2>
+  <div class="step-box">
+    <p>Nextcloud 上の自炊本も、WebDAV を通じてダウンロード待ち時間ゼロでストリーミング読書できます。</p>
+    
+    <h3>1. Nextcloud 側でアプリパスワードを発行（推奨）</h3>
+    <p>安全のため、通常のパスワードではなく **アプリパスワード** の利用を推奨します（2段階認証をご利用の場合は必須です）。</p>
+    <ol>
+      <li>Nextcloud のWeb画面にログインします。</li>
+      <li>右上のユーザーアイコン → <strong>「個人設定」</strong> → 左メニュー <strong>「セキュリティ」</strong> を開きます。</li>
+      <li>ページ下部の「デバイスとセッション」でアプリ名（例: <code>Cloud-Bookreader</code>）を入力し、<strong>「新しいアプリパスワードを作成」</strong> をクリックします。</li>
+      <li>表示されたユーザー名とパスワードをコピーします。</li>
+    </ol>
+
+    <h3>2. アプリでの接続</h3>
+    <ol>
+      <li>トップページの <strong>「Nextcloud で接続」</strong> ボタンをクリック。</li>
+      <li>以下の3項目を入力します：
+        <ul>
+          <li><strong>Nextcloud サーバーURL</strong>: 例 <code>https://cloud.example.com</code><br>
+          <small style="color:#6b7280;">※トップページのURLを入力すれば、WebDAVパス（<code>/remote.php/dav/files/ユーザー名</code>）は自動補完されます。</small></li>
+          <li><strong>ユーザー名</strong>: Nextcloud のユーザー名</li>
+          <li><strong>パスワード</strong>: 先ほど発行したアプリパスワード（または通常のパスワード）</li>
+        </ul>
+      </li>
+      <li><strong>「Nextcloud に接続」</strong> をクリック。</li>
+    </ol>
+
+    <h3>3. 本棚フォルダの選択</h3>
+    <p>接続後、本棚画面で <strong>「Nextcloudから本棚フォルダを選択」</strong> を押し、自炊書籍が入ったフォルダを指定すれば完了です！</p>
+  </div>
+
   <h2>🔵 Microsoft OneDrive の設定手順</h2>
   <div class="step-box">
     <p>トップページの <strong>「OneDrive でログイン」</strong> ボタンをクリックし、お使いの Microsoft アカウントでサインインするだけです。本棚画面でアプリ内フォルダピッカーから本棚フォルダを選択してください。</p>
@@ -71,7 +104,6 @@
     <ul>
       <li><strong>Synology NAS</strong>: パッケージセンターから「WebDAV Server」をインストールし、「HTTPS を有効にする (ポート: 5006)」を適用。</li>
       <li><strong>QNAP NAS</strong>: コントロールパネル →「アプリケーション」→「WebDAV」を開き有効化（ポート: 5001等）。</li>
-      <li><strong>Nextcloud / ownCloud</strong>: Web画面左下の「ファイル設定」に表示される WebDAV URL をコピー。</li>
     </ul>
     <h3>2. アプリでの接続</h3>
     <ol>
@@ -79,6 +111,27 @@
       <li>サーバーURL、ユーザー名、パスワードを入力して「NASに接続」。</li>
       <li>フォルダ選択で、自炊本が入っている共有フォルダ（例: <code>/volume1/manga</code>）を指定すれば完了！</li>
     </ol>
+  </div>
+
+  <h2>🔄 すでにアプリをご利用中の方へ：最新版への更新（アップデート）手順</h2>
+  <div class="info-box">
+    <p style="margin-top:0; font-weight:bold; color:#0369a1;">過去に Vercel ＋ GitHub で自分専用リーダーを作成された方は、1クリックで最新機能（Nextcloud対応など）を取り込めます。</p>
+    
+    <h3>方法1: GitHubの「Sync fork」を使う（最も簡単・おすすめ）</h3>
+    <ol>
+      <li>GitHubにログインし、ご自身のアカウントにフォークされている <code>Cloud-Bookreader</code> リポジトリを開きます。</li>
+      <li>リポジトリ上部の緑色ボタン付近にある <strong>「Sync fork」</strong> をクリックします。</li>
+      <li><strong>「Update branch」</strong> をクリックします。</li>
+      <li>これだけで本家の最新コードが同期され、<strong>Vercelが自動検知して約1〜2分で最新版が自動デプロイ</strong> されます！</li>
+    </ol>
+    <p style="font-size:12px; color:#0369a1; background:#e0f2fe; padding:8px 12px; border-radius:8px;">
+      💡 <strong>環境変数の追加は不要です</strong>: 今回のアップデートは環境変数の変更・追加が不要なため、ブランチ更新だけで即座にNextcloud接続ボタンが反映されます。
+    </p>
+
+    <h3>方法2: Git コマンドで更新する場合</h3>
+    <pre style="background:#f1f5f9; padding:10px; border-radius:6px; font-family:Consolas, monospace; font-size:13px;"><code>git fetch upstream master
+git merge upstream/master
+git push origin master</code></pre>
   </div>
 
   <h2>📖 読書機能・操作マニュアル</h2>

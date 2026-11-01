@@ -15,12 +15,12 @@ const PROGRESS_PATH = `${APP_DIR}/progress.json`;
 const CONFIG_PATH = `${APP_DIR}/config.json`;
 
 export class WebDAVProvider implements StorageProvider {
-  readonly providerId = 'webdav' as const;
-  readonly providerName = 'WebDAV (自宅NAS)';
+  readonly providerId: 'webdav' | 'nextcloud' = 'webdav';
+  readonly providerName: string = 'WebDAV (自宅NAS)';
 
-  private client: WebDAVClient;
+  protected client: WebDAVClient;
 
-  constructor(private config: WebDAVConfig) {
+  constructor(protected config: WebDAVConfig) {
     this.client = createClient(config.url, {
       username: config.username || '',
       password: config.password || '',
@@ -269,3 +269,9 @@ export class WebDAVProvider implements StorageProvider {
     }
   }
 }
+
+export class NextcloudProvider extends WebDAVProvider {
+  override readonly providerId = 'nextcloud' as const;
+  override readonly providerName = 'Nextcloud';
+}
+

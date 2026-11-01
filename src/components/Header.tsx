@@ -22,6 +22,8 @@ interface HeaderProps {
   onSearch?: (query: string) => void;
   onRefresh?: () => void;
   isLoading?: boolean;
+  isLocalMode?: boolean;
+  onExitLocalMode?: () => void;
 }
 
 export function Header({
@@ -30,11 +32,14 @@ export function Header({
   onSearch,
   onRefresh,
   isLoading = false,
+  isLocalMode = false,
+  onExitLocalMode,
 }: HeaderProps) {
   const { data: session } = useSession();
   const [searchInput, setSearchInput] = useState('');
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { theme, toggleTheme } = useUiTheme();
+  const isActiveSession = !!session || isLocalMode;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +63,7 @@ export function Header({
       </div>
 
       {/* 検索バー */}
-      {session && (
+      {isActiveSession && (
         <form
           onSubmit={handleSearchSubmit}
           className="mx-4 flex flex-1 max-w-md items-center"
@@ -109,7 +114,22 @@ export function Header({
           )}
         </button>
 
-        {session ? (
+        {isLocalMode && !session ? (
+          <div className="flex items-center space-x-2 pl-2 border-l border-[var(--border-color)]">
+            <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              📂 ローカル閲覧中
+            </span>
+            <button
+              type="button"
+              onClick={onExitLocalMode}
+              title="ローカル閲覧を終了してトップへ戻る"
+              className="flex items-center space-x-1 rounded-xl border border-[var(--border-color)] bg-[var(--bg-card)] px-2.5 py-1.5 text-xs font-semibold text-[var(--text-secondary)] hover:text-rose-500 hover:border-rose-500/40 transition shadow-sm"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+              <span>終了して戻る</span>
+            </button>
+          </div>
+        ) : session ? (
           <>
             {/* 更新ボタン */}
             {onRefresh && (
@@ -177,6 +197,10 @@ export function Header({
                       <div className="mt-1.5 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[var(--accent-bg)] text-[var(--accent)] border border-[var(--accent-border)]">
                         {session.provider === 'webdav'
                           ? '🏠 自宅NAS (WebDAV)'
+                          : session.provider === 'nextcloud'
+                          ? '☁️ Nextcloud'
+                          : session.provider === 'dropbox'
+                          ? '📦 Dropbox'
                           : session.provider === 'azure-ad'
                           ? '🔵 OneDrive'
                           : '🔴 Google ドライブ'}

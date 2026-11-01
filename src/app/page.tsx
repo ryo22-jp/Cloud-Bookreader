@@ -1,11 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
 import { Header } from '@/components/Header';
 import { Bookshelf } from '@/components/Bookshelf';
 import { WebDAVConnectModal } from '@/components/Bookshelf/WebDAVConnectModal';
+import { NextcloudConnectModal } from '@/components/Bookshelf/NextcloudConnectModal';
+import { DropboxConnectModal } from '@/components/Bookshelf/DropboxConnectModal';
+import { LocalFileModal } from '@/components/Bookshelf/LocalFileModal';
+import { isLocalModeActive, setLocalModeActive, clearLocalBlobs } from '@/lib/local-files';
 import {
   Sparkles,
   BookOpen,
@@ -13,6 +17,7 @@ import {
   ShieldCheck,
   Cloud,
   Server,
+  HardDrive,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -20,6 +25,14 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [isWebDAVModalOpen, setIsWebDAVModalOpen] = useState<boolean>(false);
+  const [isNextcloudModalOpen, setIsNextcloudModalOpen] = useState<boolean>(false);
+  const [isDropboxModalOpen, setIsDropboxModalOpen] = useState<boolean>(false);
+  const [isLocalModalOpen, setIsLocalModalOpen] = useState<boolean>(false);
+  const [isLocalMode, setIsLocalMode] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsLocalMode(isLocalModeActive());
+  }, []);
 
   const handleRefresh = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -29,6 +42,14 @@ export default function HomePage() {
     setSearchQuery(q);
   };
 
+  const handleExitLocalMode = async () => {
+    setLocalModeActive(false);
+    setIsLocalMode(false);
+    sessionStorage.removeItem('cloud_reader_last_folder_id');
+    sessionStorage.removeItem('cloud_reader_last_breadcrumbs');
+    await clearLocalBlobs();
+  };
+
   const GUIDE_URL = 'https://puzzleout.net/cloud-book-reader';
 
   return (
@@ -36,6 +57,8 @@ export default function HomePage() {
       <Header
         onSearch={handleSearch}
         onRefresh={handleRefresh}
+        isLocalMode={isLocalMode}
+        onExitLocalMode={handleExitLocalMode}
       />
 
       <main className="flex-1">
@@ -43,18 +66,20 @@ export default function HomePage() {
           <div className="flex h-[80vh] items-center justify-center">
             <div className="h-10 w-10 animate-spin rounded-full border-4 border-[var(--accent)] border-t-transparent" />
           </div>
-        ) : session ? (
-          /* ログイン時：本棚を表示 */
+        ) : session || isLocalMode ? (
+          /* ログイン時またはローカル閲覧モード時：本棚を表示 */
           <Bookshelf
             searchQuery={searchQuery}
             refreshTrigger={refreshTrigger}
+            isLocalMode={!session && isLocalMode}
+            onExitLocalMode={handleExitLocalMode}
           />
         ) : (
           /* 未ログイン時：シンプルで洗練されたランディング */
           <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-24 text-center">
             <div className="inline-flex items-center space-x-2 rounded-full border border-[var(--accent-border)] bg-[var(--accent-bg)] px-4 py-1.5 text-xs font-semibold text-[var(--accent)] mb-8 shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
-              <span>Google Drive • OneDrive • 自宅NAS (WebDAV) 対応</span>
+              <span>Google Drive • OneDrive • Dropbox • Nextcloud • 自宅NAS • ローカル対応</span>
             </div>
 
             <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] sm:text-5xl leading-tight">
@@ -64,7 +89,7 @@ export default function HomePage() {
 
             <p className="mx-auto mt-5 max-w-xl text-sm sm:text-base text-[var(--text-muted)] leading-relaxed">
               PDF、ZIP、CBZ、EPUBをダウンロード待ちなしで即座に閲覧。
-              しおりや読書進捗もクラウド・NASと完全同期します。
+              しおりや読書進捗もクラウド・NAS・端末と完全同期します。
             </p>
 
             {/* 接続ボタン群 */}
@@ -89,16 +114,43 @@ export default function HomePage() {
                   <Cloud className="h-4 w-4" />
                   <span>OneDrive でログイン</span>
                 </button>
-              </div>
 
-              {/* 自宅NAS (WebDAV) 接続ボタン */}
-              <button
-                onClick={() => setIsWebDAVModalOpen(true)}
-                className="w-full flex items-center justify-center space-x-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 px-5 py-3.5 text-sm font-bold transition active:scale-[0.98] shadow-sm"
-              >
-                <Server className="h-4 w-4" />
-                <span>自宅NAS (WebDAV) で接続</span>
-              </button>
+                {/* Dropbox 接続ボタン */}
+                <button
+                  onClick={() => setIsDropboxModalOpen(true)}
+                  className="flex items-center justify-center space-x-2.5 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 px-5 py-3.5 text-sm font-bold transition active:scale-[0.98] shadow-sm"
+                >
+                  <Cloud className="h-4 w-4" />
+                  <span>Dropbox で接続</span>
+                </button>
+
+                {/* Nextcloud 接続ボタン */}
+                <button
+                  onClick={() => setIsNextcloudModalOpen(true)}
+                  className="flex items-center justify-center space-x-2.5 rounded-2xl border border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 px-5 py-3.5 text-sm font-bold transition active:scale-[0.98] shadow-sm"
+                >
+                  <Cloud className="h-4 w-4" />
+                  <span>Nextcloud で接続</span>
+                </button>
+
+                {/* 自宅NAS (WebDAV) 接続ボタン */}
+                <button
+                  onClick={() => setIsWebDAVModalOpen(true)}
+                  className="flex items-center justify-center space-x-2.5 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 px-5 py-3.5 text-sm font-bold transition active:scale-[0.98] shadow-sm"
+                >
+                  <Server className="h-4 w-4" />
+                  <span>自宅NAS (WebDAV)</span>
+                </button>
+
+                {/* ローカル閲覧ボタン（ログイン不要） */}
+                <button
+                  onClick={() => setIsLocalModalOpen(true)}
+                  className="flex items-center justify-center space-x-2.5 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 px-5 py-3.5 text-sm font-bold transition active:scale-[0.98] shadow-sm"
+                >
+                  <HardDrive className="h-4 w-4" />
+                  <span>ローカル閲覧 (端末内の本)</span>
+                </button>
+              </div>
 
               {/* 紹介記事リンク */}
               <a
@@ -122,10 +174,32 @@ export default function HomePage() {
         )}
       </main>
 
+      {/* Dropbox 接続モーダル */}
+      <DropboxConnectModal
+        isOpen={isDropboxModalOpen}
+        onClose={() => setIsDropboxModalOpen(false)}
+      />
+
+      {/* Nextcloud 接続モーダル */}
+      <NextcloudConnectModal
+        isOpen={isNextcloudModalOpen}
+        onClose={() => setIsNextcloudModalOpen(false)}
+      />
+
       {/* 自宅NAS接続モーダル */}
       <WebDAVConnectModal
         isOpen={isWebDAVModalOpen}
         onClose={() => setIsWebDAVModalOpen(false)}
+      />
+
+      {/* ローカルファイル・フォルダ閲覧モーダル */}
+      <LocalFileModal
+        isOpen={isLocalModalOpen}
+        onClose={() => setIsLocalModalOpen(false)}
+        onFilesImported={() => {
+          setIsLocalMode(true);
+          handleRefresh();
+        }}
       />
 
       {/* フッター（ログイン後・未ログイン共通で目立つデザイン） */}

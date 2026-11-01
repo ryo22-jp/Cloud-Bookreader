@@ -9,8 +9,12 @@ import {
   Minimize,
   ChevronLeft,
   ChevronRight,
+  SkipBack,
+  SkipForward,
+  BookOpen,
 } from 'lucide-react';
 import { ViewerSettings } from '@/types';
+import { AdjacentBookInfo } from '@/lib/local-files';
 
 interface ReaderControlsProps {
   fileName: string;
@@ -22,6 +26,9 @@ interface ReaderControlsProps {
   onSettingsChange: (settings: ViewerSettings) => void;
   onToggleControls: () => void;
   fileType: 'pdf' | 'zip' | 'cbz' | 'epub';
+  prevBook?: AdjacentBookInfo | null;
+  nextBook?: AdjacentBookInfo | null;
+  isAtLastPage?: boolean;
 }
 
 export function ReaderControls({
@@ -34,6 +41,9 @@ export function ReaderControls({
   onSettingsChange,
   onToggleControls,
   fileType,
+  prevBook = null,
+  nextBook = null,
+  isAtLastPage = false,
 }: ReaderControlsProps) {
   const router = useRouter();
   const [showSettingsModal, setShowSettingsModal] = useState(false);
@@ -41,11 +51,12 @@ export function ReaderControls({
 
   // 直前の画面（フォルダ）に戻る
   const handleGoBack = () => {
-    if (window.history.length > 1) {
-      router.back();
-    } else {
-      router.push('/');
-    }
+    router.push('/');
+  };
+
+  // 前後の巻へ遷移（replaceにより「戻る」で常に本棚へ一発で戻れるようにする）
+  const handleNavigateBook = (book: AdjacentBookInfo) => {
+    router.replace(`/read/${book.id}?name=${encodeURIComponent(book.name)}`);
   };
 
   // 全画面切り替え
@@ -269,7 +280,29 @@ export function ReaderControls({
         </div>
       )}
 
-      {/* 下部フッターバー（シークバー・ページ送り） */}
+      {/* 最終ページ到達時の連続読書フローティングボタン */}
+      {nextBook && isAtLastPage && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className={`fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
+            isVisible ? 'bottom-28' : 'bottom-10'
+          }`}
+        >
+          <button
+            onClick={() => handleNavigateBook(nextBook)}
+            title={`次の巻を開く: ${nextBook.name}`}
+            className="flex items-center space-x-2.5 rounded-2xl bg-[var(--accent)] px-5 py-3 text-xs sm:text-sm font-bold text-white shadow-xl shadow-[var(--accent)]/30 hover:opacity-95 hover:scale-105 active:scale-95 transition border border-white/20 whitespace-nowrap"
+          >
+            <BookOpen className="h-4 w-4 shrink-0" />
+            <span className="truncate max-w-[200px] sm:max-w-[320px]">
+              次の巻を読む: {nextBook.name}
+            </span>
+            <SkipForward className="h-4 w-4 shrink-0" />
+          </button>
+        </div>
+      )}
+
+      {/* 下部フッターバー（シークバー・ページ送り・前後巻移動） */}
       <div
         onClick={(e) => e.stopPropagation()}
         className={`fixed bottom-0 left-0 right-0 z-50 bg-[var(--bg-secondary)]/95 px-4 py-3 text-[var(--text-primary)] border-t border-[var(--border-color)] backdrop-blur-md transition-transform duration-300 ${
@@ -298,29 +331,65 @@ export function ReaderControls({
             </div>
           )}
 
-          {/* ページ送りボタン */}
-          <div className="flex items-center justify-between pt-1">
-            <button
-              onClick={() => onPageChange(isRTL ? currentPage + 1 : currentPage - 1)}
-              disabled={isRTL ? currentPage >= totalPages : currentPage <= 1}
-              className="flex items-center space-x-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition disabled:opacity-30 shadow-sm"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              <span>{isRTL ? '次ページ' : '前ページ'}</span>
-            </button>
+          {/* ページ送り & 前後巻ボタン */}
+          <div className="flex items-center justify-between pt-1 gap-2">
+            <div className="flex items-center space-x-1.5">
+              <button
+                onClick={() => onPageChange(isRTL ? currentPage + 1 : currentPage - 1)}
+                disabled={isRTL ? currentPage >= totalPages : currentPage <= 1}
+                className="flex items-center space-x-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition disabled:opacity-30 shadow-sm"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span>{isRTL ? '次ページ' : '前ページ'}</span>
+              </button>
+
+              {/* 右開き時は左側に「次の巻へ」、左開き時は「前の巻へ」 */}
+              {(isRTL ? nextBook : prevBook) && (
+                <button
+                  onClick={() => handleNavigateBook((isRTL ? nextBook : prevBook)!)}
+                  title={
+                    isRTL
+                      ? `次の巻: ${nextBook?.name}`
+                      : `前の巻: ${prevBook?.name}`
+                  }
+                  className="flex items-center space-x-1 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-bg)] px-2.5 py-1.5 text-xs font-semibold text-[var(--accent)] hover:opacity-80 transition shadow-sm"
+                >
+                  <SkipBack className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">{isRTL ? '次の巻' : '前の巻'}</span>
+                </button>
+              )}
+            </div>
 
             <span className="text-xs text-[var(--text-muted)] font-medium">
               {totalPages > 0 ? `${Math.round((currentPage / totalPages) * 100)}%` : ''}
             </span>
 
-            <button
-              onClick={() => onPageChange(isRTL ? currentPage - 1 : currentPage + 1)}
-              disabled={isRTL ? currentPage <= 1 : currentPage >= totalPages}
-              className="flex items-center space-x-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition disabled:opacity-30 shadow-sm"
-            >
-              <span>{isRTL ? '前ページ' : '次ページ'}</span>
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            <div className="flex items-center space-x-1.5">
+              {/* 右開き時は右側に「前の巻へ」、左開き時は「次の巻へ」 */}
+              {(isRTL ? prevBook : nextBook) && (
+                <button
+                  onClick={() => handleNavigateBook((isRTL ? prevBook : nextBook)!)}
+                  title={
+                    isRTL
+                      ? `前の巻: ${prevBook?.name}`
+                      : `次の巻: ${nextBook?.name}`
+                  }
+                  className="flex items-center space-x-1 rounded-xl border border-[var(--accent-border)] bg-[var(--accent-bg)] px-2.5 py-1.5 text-xs font-semibold text-[var(--accent)] hover:opacity-80 transition shadow-sm"
+                >
+                  <span className="hidden sm:inline">{isRTL ? '前の巻' : '次の巻'}</span>
+                  <SkipForward className="h-3.5 w-3.5" />
+                </button>
+              )}
+
+              <button
+                onClick={() => onPageChange(isRTL ? currentPage - 1 : currentPage + 1)}
+                disabled={isRTL ? currentPage <= 1 : currentPage >= totalPages}
+                className="flex items-center space-x-1 rounded-xl bg-[var(--bg-card)] border border-[var(--border-color)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--accent)] transition disabled:opacity-30 shadow-sm"
+              >
+                <span>{isRTL ? '前ページ' : '次ページ'}</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>

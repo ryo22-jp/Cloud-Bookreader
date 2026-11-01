@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ViewerSettings, BookProgress } from '@/types';
 import { ReaderControls } from './ReaderControls';
 import { saveLocalProgress, saveViewerSettings, getOfflineBookBlob } from '@/lib/storage';
+import { AdjacentBookInfo } from '@/lib/local-files';
 import { Loader2 } from 'lucide-react';
 import ePub, { Book, Rendition, Location } from 'epubjs';
 
@@ -12,6 +13,8 @@ interface EpubViewerProps {
   fileName: string;
   initialCfi?: string;
   initialSettings: ViewerSettings;
+  prevBook?: AdjacentBookInfo | null;
+  nextBook?: AdjacentBookInfo | null;
 }
 
 export function EpubViewer({
@@ -19,6 +22,8 @@ export function EpubViewer({
   fileName,
   initialCfi,
   initialSettings,
+  prevBook = null,
+  nextBook = null,
 }: EpubViewerProps) {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(100);
@@ -108,11 +113,13 @@ export function EpubViewer({
           };
 
           saveLocalProgress(progress);
-          fetch('/api/drive/progress', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(progress),
-          }).catch(() => {});
+          if (!fileId.startsWith('local_')) {
+            fetch('/api/drive/progress', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(progress),
+            }).catch(() => {});
+          }
         });
 
         if (isMounted) setIsLoading(false);
@@ -169,6 +176,9 @@ export function EpubViewer({
         isVisible={isControlsVisible}
         settings={settings}
         fileType="epub"
+        prevBook={prevBook}
+        nextBook={nextBook}
+        isAtLastPage={currentPage >= 99}
         onPageChange={handlePageChange}
         onSettingsChange={(newSettings) => {
           setSettings(newSettings);

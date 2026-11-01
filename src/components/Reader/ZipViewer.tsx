@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { ViewerSettings, BookProgress } from '@/types';
 import { ReaderControls } from './ReaderControls';
 import { saveLocalProgress, saveViewerSettings, saveCoverImage, getCoverImage, getOfflineBookBlob } from '@/lib/storage';
+import { AdjacentBookInfo } from '@/lib/local-files';
 import { Loader2 } from 'lucide-react';
 import { unzip, ZipEntry } from 'unzipit';
 
@@ -13,6 +14,8 @@ interface ZipViewerProps {
   fileType: 'zip' | 'cbz';
   initialPage?: number;
   initialSettings: ViewerSettings;
+  prevBook?: AdjacentBookInfo | null;
+  nextBook?: AdjacentBookInfo | null;
 }
 
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.avif', '.gif', '.bmp'];
@@ -32,6 +35,8 @@ export function ZipViewer({
   fileType,
   initialPage = 1,
   initialSettings,
+  prevBook = null,
+  nextBook = null,
 }: ZipViewerProps) {
   const [currentPage, setCurrentPage] = useState<number>(initialPage);
   const [entries, setEntries] = useState<ZipEntry[]>([]);
@@ -199,11 +204,13 @@ export function ZipViewer({
       };
 
       saveLocalProgress(progress);
-      fetch('/api/drive/progress', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(progress),
-      }).catch(() => {});
+      if (!fileId.startsWith('local_')) {
+        fetch('/api/drive/progress', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(progress),
+        }).catch(() => {});
+      }
     };
 
     saveProgressAsync();
@@ -270,6 +277,7 @@ export function ZipViewer({
   });
 
   const visiblePages = getVisiblePages(currentPage);
+  const isAtLastPage = totalPages > 0 && visiblePages.includes(totalPages);
   const isRtl = settings.readingDirection === 'rtl';
 
   return (
@@ -284,6 +292,9 @@ export function ZipViewer({
         isVisible={isControlsVisible}
         settings={settings}
         fileType={fileType}
+        prevBook={prevBook}
+        nextBook={nextBook}
+        isAtLastPage={isAtLastPage}
         onPageChange={handlePageChange}
         onSettingsChange={(newSettings) => {
           setSettings(newSettings);
