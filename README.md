@@ -5,7 +5,7 @@ Googleドライブ、Microsoft OneDrive、Dropbox、Nextcloud、自宅NAS (WebDA
 📖 **公式紹介・導入＆使い方ガイドはこちら**:  
 👉 **[https://puzzleout.net/cloud-book-reader](https://puzzleout.net/cloud-book-reader)**
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fryo22-jp%2FCloud-Bookreader&env=GOOGLE_CLIENT_ID,GOOGLE_CLIENT_SECRET,NEXTAUTH_SECRET&envDescription=Google%20Cloud%20Console%E3%81%A7%E5%8F%96%E5%BE%97%E3%81%97%E3%81%9F%E3%82%AF%E3%83%A9%E3%82%A4%E3%82%A0%E3%83%B3%E3%83%88ID%E3%80%81%E3%82%B7%E3%83%BC%E3%82%AF%E3%83%AC%E3%83%83%E3%83%88%E3%80%81%E4%BB%BB%E6%84%8F%E3%81%AE%E3%83%A9%E3%83%B3%E3%83%80%E3%83%A0%E6%96%87%E5%AD%97%E5%88%97(NEXTAUTH_SECRET)%E3%82%92%E5%85%A5%E5%8A%9B%E3%81%97%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84%E3%80%82)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fryo22-jp%2FCloud-Bookreader&env=NEXTAUTH_SECRET&envDescription=%E3%82%BB%E3%83%83%E3%82%B7%E3%83%A7%E3%83%B3%E6%9A%97%E5%8F%B7%E5%8C%96%E7%94%A8%E3%81%AE%E4%BB%BB%E6%84%8F%E3%81%AE%E3%83%A9%E3%83%B3%E3%83%80%E3%83%A0%E6%96%87%E5%AD%97%E5%88%97%EF%BC%88%E4%BE%8B%3A%20my-secret-key-1234567890%20%E3%81%AA%E3%81%A9%EF%BC%89%E3%82%92%E5%85%A5%E5%8A%9B%E3%81%97%E3%81%A6%E3%81%8F%E3%81%A0%E3%81%95%E3%81%84%E3%80%82&project-name=my-cloud-bookreader)
 
 ---
 
