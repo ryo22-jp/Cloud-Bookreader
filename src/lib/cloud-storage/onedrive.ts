@@ -1,6 +1,11 @@
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 import { StorageProvider } from './types';
 import { determineFileType } from '@/lib/drive';
+import {
+  assertSafeCloudId,
+  sanitizeSafeContentType,
+  applyStreamSecurityHeaders,
+} from '@/lib/security';
 
 const PROGRESS_FILE_NAME = 'gdrive_reader_progress.json';
 const CONFIG_FILE_NAME = 'gdrive_reader_config.json';
@@ -51,12 +56,15 @@ export class OneDriveProvider implements StorageProvider {
     try {
       let url: string;
       if (query && query.trim()) {
-        const escaped = encodeURIComponent(query.trim());
+        // OData文字列リテラル内のシングルクォートを '' にエスケープしてからURLエンコード
+        const odataEscaped = query.trim().replace(/'/g, "''");
+        const escaped = encodeURIComponent(odataEscaped);
         url = `${GRAPH_BASE}/me/drive/root/search(q='${escaped}')?$top=200&$expand=thumbnails`;
       } else if (folderId === 'root') {
         url = `${GRAPH_BASE}/me/drive/root/children?$top=200&$expand=thumbnails`;
       } else {
-        url = `${GRAPH_BASE}/me/drive/items/${folderId}/children?$top=200&$expand=thumbnails`;
+        const safeFolderId = assertSafeCloudId(folderId, 'folderId');
+        url = `${GRAPH_BASE}/me/drive/items/${encodeURIComponent(safeFolderId)}/children?$top=200&$expand=thumbnails`;
       }
 
       const res = await fetch(url, { headers: this.getHeaders() });
@@ -95,7 +103,8 @@ export class OneDriveProvider implements StorageProvider {
   }
 
   async getFileMetadata(fileId: string): Promise<DriveFile> {
-    const url = `${GRAPH_BASE}/me/drive/items/${fileId}?$expand=thumbnails`;
+    const safeFileId = assertSafeCloudId(fileId, 'fileId');
+    const url = `${GRAPH_BASE}/me/drive/items/${encodeURIComponent(safeFileId)}?$expand=thumbnails`;
     const res = await fetch(url, { headers: this.getHeaders() });
     if (!res.ok) {
       throw new Error(`Failed to fetch OneDrive item: ${res.statusText}`);
@@ -105,7 +114,8 @@ export class OneDriveProvider implements StorageProvider {
   }
 
   async streamFile(fileId: string, rangeHeader: string | null): Promise<Response> {
-    const contentUrl = `${GRAPH_BASE}/me/drive/items/${fileId}/content`;
+    const safeFileId = assertSafeCloudId(fileId, 'fileId');
+    const contentUrl = `${GRAPH_BASE}/me/drive/items/${encodeURIComponent(safeFileId)}/content`;
 
     // 1. Graph API からダウンロードURL（302リダイレクト先）を取得
     const initialRes = await fetch(contentUrl, {
@@ -136,14 +146,12 @@ export class OneDriveProvider implements StorageProvider {
 
     const responseHeaders = new Headers();
     responseHeaders.set('Accept-Ranges', 'bytes');
-    const contentType = streamRes.headers.get('content-type');
-    if (contentType) responseHeaders.set('Content-Type', contentType);
+    responseHeaders.set('Content-Type', sanitizeSafeContentType(streamRes.headers.get('content-type')));
     const contentLength = streamRes.headers.get('content-length');
     if (contentLength) responseHeaders.set('Content-Length', contentLength);
     const contentRange = streamRes.headers.get('content-range');
     if (contentRange) responseHeaders.set('Content-Range', contentRange);
-    const contentDisposition = streamRes.headers.get('content-disposition');
-    if (contentDisposition) responseHeaders.set('Content-Disposition', contentDisposition);
+    applyStreamSecurityHeaders(responseHeaders);
     responseHeaders.set('Cache-Control', 'private, max-age=3600');
 
     return new Response(streamRes.body, {

@@ -1,6 +1,7 @@
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 import { StorageProvider } from './types';
 import { determineFileType } from '@/lib/drive';
+import { sanitizeSafeContentType, applyStreamSecurityHeaders } from '@/lib/security';
 
 const APP_DIR = '/.cloud_bookreader';
 const PROGRESS_PATH = `${APP_DIR}/progress.json`;
@@ -228,13 +229,14 @@ export class DropboxProvider implements StorageProvider {
         }
       } catch {}
     }
-    responseHeaders.set('Content-Type', mimeType);
+    responseHeaders.set('Content-Type', sanitizeSafeContentType(mimeType));
 
     const contentLength = streamRes.headers.get('content-length');
     if (contentLength) responseHeaders.set('Content-Length', contentLength);
     const contentRange = streamRes.headers.get('content-range');
     if (contentRange) responseHeaders.set('Content-Range', contentRange);
 
+    applyStreamSecurityHeaders(responseHeaders);
     responseHeaders.set('Cache-Control', 'private, max-age=3600');
 
     return new Response(streamRes.body, {

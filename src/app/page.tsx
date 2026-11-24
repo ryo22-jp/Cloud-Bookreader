@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession, signIn } from 'next-auth/react';
 import { Header } from '@/components/Header';
+import { UpdateNotifier } from '@/components/UpdateNotifier';
 import { Bookshelf } from '@/components/Bookshelf';
 import { WebDAVConnectModal } from '@/components/Bookshelf/WebDAVConnectModal';
 import { NextcloudConnectModal } from '@/components/Bookshelf/NextcloudConnectModal';
@@ -60,6 +61,7 @@ export default function HomePage() {
         isLocalMode={isLocalMode}
         onExitLocalMode={handleExitLocalMode}
       />
+      <UpdateNotifier />
 
       <main className="flex-1">
         {status === 'loading' ? (

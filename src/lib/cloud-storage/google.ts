@@ -1,6 +1,11 @@
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 import { StorageProvider } from './types';
 import {
+  assertSafeCloudId,
+  sanitizeSafeContentType,
+  applyStreamSecurityHeaders,
+} from '@/lib/security';
+import {
   listDriveFiles,
   getFileMetadata,
   getCloudProgress,
@@ -40,7 +45,8 @@ export class GoogleDriveProvider implements StorageProvider {
   }
 
   async streamFile(fileId: string, rangeHeader: string | null): Promise<Response> {
-    const driveUrl = `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`;
+    const safeFileId = assertSafeCloudId(fileId, 'fileId');
+    const driveUrl = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(safeFileId)}?alt=media`;
     const headers: HeadersInit = {
       Authorization: `Bearer ${this.accessToken}`,
     };
@@ -55,14 +61,12 @@ export class GoogleDriveProvider implements StorageProvider {
 
     const responseHeaders = new Headers();
     responseHeaders.set('Accept-Ranges', 'bytes');
-    const contentType = driveRes.headers.get('content-type');
-    if (contentType) responseHeaders.set('Content-Type', contentType);
+    responseHeaders.set('Content-Type', sanitizeSafeContentType(driveRes.headers.get('content-type')));
     const contentLength = driveRes.headers.get('content-length');
     if (contentLength) responseHeaders.set('Content-Length', contentLength);
     const contentRange = driveRes.headers.get('content-range');
     if (contentRange) responseHeaders.set('Content-Range', contentRange);
-    const contentDisposition = driveRes.headers.get('content-disposition');
-    if (contentDisposition) responseHeaders.set('Content-Disposition', contentDisposition);
+    applyStreamSecurityHeaders(responseHeaders);
     responseHeaders.set('Cache-Control', 'private, max-age=3600');
 
     return new Response(driveRes.body, {

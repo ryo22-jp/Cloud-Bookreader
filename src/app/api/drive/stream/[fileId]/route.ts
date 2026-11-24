@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { serverAuthOptions } from '@/lib/auth';
 import { getStorageProvider } from '@/lib/cloud-storage';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: { fileId: string } }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await getServerSession(serverAuthOptions);
     if (!session || !session.accessToken || (session as any).error === 'RefreshAccessTokenError') {
       return NextResponse.json(
         { error: '認証の有効期限が切れました。再度ログインしてください。', isAuthError: true },

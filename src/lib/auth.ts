@@ -4,6 +4,7 @@ import AzureADProvider from 'next-auth/providers/azure-ad';
 import DropboxProvider from 'next-auth/providers/dropbox';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { createClient } from 'webdav';
+import { validateWebDAVUrl, isEmailAllowed } from './server-security';
 
 /**
  * Googleのリフレッシュトークンを使用してアクセストークンを更新
@@ -211,6 +212,9 @@ const providers: NextAuthOptions['providers'] = [
       password: { label: 'Password', type: 'password' },
     },
     async authorize(credentials) {
+      if (process.env.DISABLE_WEBDAV === 'true') {
+        throw new Error('Nextcloud接続は管理者により無効化されています');
+      }
       if (!credentials?.serverUrl) {
         throw new Error('NextcloudのサーバーURLを入力してください');
       }
@@ -219,10 +223,17 @@ const providers: NextAuthOptions['providers'] = [
       const password = credentials.password || '';
       const candidateUrls = normalizeNextcloudUrl(credentials.serverUrl, username);
 
+      // SSRF対策・プロトコル検証（候補URLの先頭＝ベースURLを検証）
+      const validatedCandidates: string[] = [];
+      for (const candidate of candidateUrls) {
+        const safeUrl = await validateWebDAVUrl(candidate);
+        validatedCandidates.push(safeUrl);
+      }
+
       let lastError: any = null;
       let connectedUrl: string | null = null;
 
-      for (const testUrl of candidateUrls) {
+      for (const testUrl of validatedCandidates) {
         try {
           const client = createClient(testUrl, {
             username,
@@ -239,9 +250,9 @@ const providers: NextAuthOptions['providers'] = [
       }
 
       if (!connectedUrl) {
-        console.error('Nextcloud authorize error:', lastError);
+        console.error('Nextcloud authorize error:', lastError?.message || 'connection failed');
         throw new Error(
-          `Nextcloudに接続できませんでした: ${lastError?.message || 'URLまたはログイン情報（アプリパスワード等）を確認してください'}`
+          'Nextcloudに接続できませんでした。URLまたはログイン情報（アプリパスワード等）を確認してください'
         );
       }
 
@@ -266,14 +277,20 @@ const providers: NextAuthOptions['providers'] = [
       password: { label: 'Password', type: 'password' },
     },
     async authorize(credentials) {
+      if (process.env.DISABLE_WEBDAV === 'true') {
+        throw new Error('WebDAV接続は管理者により無効化されています');
+      }
       if (!credentials?.serverUrl) {
         throw new Error('サーバーURLを入力してください');
       }
 
-      let url = credentials.serverUrl.trim();
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        url = `https://${url}`;
+      let rawUrl = credentials.serverUrl.trim();
+      if (!rawUrl.startsWith('http://') && !rawUrl.startsWith('https://')) {
+        rawUrl = `https://${rawUrl}`;
       }
+
+      // SSRF対策・プロトコル検証
+      const url = await validateWebDAVUrl(rawUrl);
 
       try {
         const client = createClient(url, {
@@ -293,9 +310,9 @@ const providers: NextAuthOptions['providers'] = [
           password: credentials.password || '',
         } as any;
       } catch (error: any) {
-        console.error('WebDAV authorize error:', error);
+        console.error('WebDAV authorize error:', error?.message || 'connection failed');
         throw new Error(
-          `WebDAVサーバーに接続できませんでした: ${error.message || 'URLまたはログイン情報を確認してください'}`
+          'WebDAVサーバーに接続できませんでした。URLまたはログイン情報を確認してください'
         );
       }
     },
@@ -309,6 +326,9 @@ const providers: NextAuthOptions['providers'] = [
       accessToken: { label: 'Access Token', type: 'password' },
     },
     async authorize(credentials) {
+      if (process.env.DISABLE_DROPBOX_TOKEN === 'true') {
+        throw new Error('Dropboxトークン接続は管理者により無効化されています');
+      }
       const token = credentials?.accessToken?.trim();
       if (!token) {
         throw new Error('Dropboxのアクセストークンを入力してください');
@@ -327,6 +347,10 @@ const providers: NextAuthOptions['providers'] = [
         }
 
         const profile = await res.json();
+        if (!isEmailAllowed(profile.email)) {
+          throw new Error('このアカウントでのログインは許可されていません');
+        }
+
         return {
           id: profile.account_id || `dropbox-${Date.now()}`,
           name: profile.name?.display_name || 'Dropbox User',
@@ -335,7 +359,7 @@ const providers: NextAuthOptions['providers'] = [
           accessToken: token,
         } as any;
       } catch (error: any) {
-        console.error('Dropbox token authorize error:', error);
+        console.error('Dropbox token authorize error:', error?.message || 'auth failed');
         throw new Error(
           `Dropboxに接続できませんでした: ${error.message || 'アクセストークンを確認してください'}`
         );
@@ -393,6 +417,13 @@ providers.push(
 export const authOptions: NextAuthOptions = {
   providers,
   callbacks: {
+    async signIn({ user, account }) {
+      // ALLOWED_EMAILS が設定されている場合、OAuthログインを指定メールアドレスのみに制限
+      if (account?.provider === 'google' || account?.provider === 'azure-ad' || account?.provider === 'dropbox') {
+        return isEmailAllowed(user?.email);
+      }
+      return true;
+    },
     async jwt({ token, user, account }) {
       // 初回サインイン時
       if (account && user) {
@@ -460,6 +491,32 @@ export const authOptions: NextAuthOptions = {
       }
       return refreshGoogleAccessToken(token);
     },
+    // クライアント（/api/auth/session）へはアクセストークンや平文WebDAVパスワードを一切返却しない
+    async session({ session, token }) {
+      session.provider = token.provider as
+        | 'google'
+        | 'azure-ad'
+        | 'dropbox'
+        | 'webdav'
+        | 'nextcloud';
+      session.error = token.error as string;
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET,
+  pages: {
+    signIn: '/',
+  },
+};
+
+/**
+ * サーバーサイドAPIルート専用オプション
+ * 暗号化JWT Cookieからアクセストークン・WebDAV資格情報をサーバー内部でのみ取り出す（クライアントには返さない）
+ */
+export const serverAuthOptions: NextAuthOptions = {
+  ...authOptions,
+  callbacks: {
+    ...authOptions.callbacks,
     async session({ session, token }) {
       session.accessToken = token.accessToken as string;
       session.provider = token.provider as
@@ -472,9 +529,5 @@ export const authOptions: NextAuthOptions = {
       session.error = token.error as string;
       return session;
     },
-  },
-  secret: process.env.NEXTAUTH_SECRET,
-  pages: {
-    signIn: '/',
   },
 };

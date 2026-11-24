@@ -3,6 +3,11 @@ import { Readable } from 'stream';
 import { DriveFile, BookProgress, AppConfig } from '@/types';
 import { StorageProvider } from './types';
 import { determineFileType } from '@/lib/drive';
+import {
+  normalizeSafeWebDAVPath,
+  sanitizeSafeContentType,
+  applyStreamSecurityHeaders,
+} from '@/lib/security';
 
 export interface WebDAVConfig {
   url: string;
@@ -40,12 +45,13 @@ export class WebDAVProvider implements StorageProvider {
    */
   private idToPath(id: string): string {
     if (!id || id === 'root') return '/';
+    let decoded = id;
     try {
-      const decoded = Buffer.from(id, 'base64url').toString('utf-8');
-      return decoded.startsWith('/') ? decoded : `/${decoded}`;
+      decoded = Buffer.from(id, 'base64url').toString('utf-8');
     } catch {
-      return id.startsWith('/') ? id : `/${id}`;
+      decoded = id;
     }
+    return normalizeSafeWebDAVPath(decoded);
   }
 
   private mapItemToDriveFile(item: any, parentId: string): DriveFile {
@@ -156,7 +162,7 @@ export class WebDAVProvider implements StorageProvider {
 
     const responseHeaders = new Headers();
     responseHeaders.set('Accept-Ranges', 'bytes');
-    responseHeaders.set('Content-Type', mimeType);
+    responseHeaders.set('Content-Type', sanitizeSafeContentType(mimeType));
 
     if (isPartial && totalSize > 0) {
       const chunkLength = end - start + 1;
@@ -166,6 +172,7 @@ export class WebDAVProvider implements StorageProvider {
       responseHeaders.set('Content-Length', totalSize.toString());
     }
 
+    applyStreamSecurityHeaders(responseHeaders);
     responseHeaders.set('Cache-Control', 'private, max-age=3600');
 
     return new Response(webStream as any, {

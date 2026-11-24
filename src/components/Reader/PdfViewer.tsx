@@ -56,8 +56,8 @@ export function PdfViewer({
       setIsLoading(true);
       try {
         const pdfjsLib = await import('pdfjs-dist');
-        // Worker設定
-        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+        // セルフホストされたWorkerを使用（外部CDN依存を排除）
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 
         // オフライン保存されているかチェック
         const offlineBlob = await getOfflineBookBlob(fileId);
@@ -67,6 +67,7 @@ export function PdfViewer({
           const arrayBuffer = await offlineBlob.arrayBuffer();
           loadingTask = pdfjsLib.getDocument({
             data: arrayBuffer,
+            isEvalSupported: false, // 悪意あるPDFからの任意JS評価を無効化
           });
         } else {
           loadingTask = pdfjsLib.getDocument({
@@ -74,6 +75,7 @@ export function PdfViewer({
             disableAutoFetch: true, // 全体ダウンロードを無効化（Rangeリクエストでオンデマンド取得）
             disableStream: false,
             rangeChunkSize: 131072, // 128KB チャンク
+            isEvalSupported: false, // 悪意あるPDFからの任意JS評価を無効化
           });
         }
 

@@ -35,7 +35,7 @@ import {
   OfflineBookMeta,
   MAX_OFFLINE_BOOKS,
 } from '@/lib/storage';
-import { openFolderPicker } from '@/lib/picker';
+import { GoogleDriveFolderPickerModal } from './GoogleDriveFolderPickerModal';
 import { OneDriveFolderPickerModal } from './OneDriveFolderPickerModal';
 import { WebDAVFolderPickerModal } from './WebDAVFolderPickerModal';
 import { WebDAVConnectModal } from './WebDAVConnectModal';
@@ -94,7 +94,8 @@ export function Bookshelf({
   const [isNextcloudConnectModalOpen, setIsNextcloudConnectModalOpen] = useState<boolean>(false);
   const [isDropboxConnectModalOpen, setIsDropboxConnectModalOpen] = useState<boolean>(false);
   const [isLocalFileModalOpen, setIsLocalFileModalOpen] = useState<boolean>(false);
-  const [isPickerOpening, setIsPickerOpening] = useState<boolean>(false);
+  const [isPickerOpening] = useState<boolean>(false);
+  const [isGoogleDrivePickerOpen, setIsGoogleDrivePickerOpen] = useState<boolean>(false);
   const [isOneDrivePickerOpen, setIsOneDrivePickerOpen] = useState<boolean>(false);
   const [isDropboxPickerOpen, setIsDropboxPickerOpen] = useState<boolean>(false);
   const [isWebDAVPickerOpen, setIsWebDAVPickerOpen] = useState<boolean>(false);
@@ -464,7 +465,7 @@ export function Bookshelf({
       return;
     }
 
-    if (!session?.accessToken) return;
+    if (!session) return;
 
     if (session.provider === 'webdav') {
       setIsWebDAVPickerOpen(true);
@@ -486,18 +487,8 @@ export function Bookshelf({
       return;
     }
 
-    // Google Picker でフォルダを選択する
-    setIsPickerOpening(true);
-    try {
-      const selected = await openFolderPicker(session.accessToken);
-      if (selected) {
-        await applySelectedFolder(selected.id, selected.name);
-      }
-    } catch (err) {
-      console.error('Picker open failed:', err);
-    } finally {
-      setIsPickerOpening(false);
-    }
+    // Googleドライブ用フォルダ選択モーダルを開く（アクセストークンをクライアントに出さない）
+    setIsGoogleDrivePickerOpen(true);
   };
 
   // フォルダクリック
@@ -987,6 +978,13 @@ export function Bookshelf({
           ))}
         </div>
       )}
+
+      {/* Googleドライブ用フォルダ選択モーダル */}
+      <GoogleDriveFolderPickerModal
+        isOpen={isGoogleDrivePickerOpen}
+        onClose={() => setIsGoogleDrivePickerOpen(false)}
+        onSelectFolder={applySelectedFolder}
+      />
 
       {/* OneDrive用フォルダ選択モーダル */}
       <OneDriveFolderPickerModal

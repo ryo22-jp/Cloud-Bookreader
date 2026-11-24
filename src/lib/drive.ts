@@ -1,4 +1,5 @@
 import { DriveFile, BookProgress, AppConfig } from '@/types';
+import { assertSafeCloudId } from './security';
 
 const PROGRESS_FILE_NAME = 'gdrive_reader_progress.json';
 const CONFIG_FILE_NAME = 'gdrive_reader_config.json';
@@ -40,9 +41,11 @@ export async function listDriveFiles(
   searchQuery?: string
 ): Promise<{ files: DriveFile[]; currentFolder?: DriveFile }> {
   try {
-    let q = `'${folderId}' in parents and trashed = false`;
+    const safeFolderId = assertSafeCloudId(folderId, 'folderId');
+    let q = `'${safeFolderId}' in parents and trashed = false`;
     if (searchQuery && searchQuery.trim()) {
-      const escaped = searchQuery.trim().replace(/'/g, "\\'");
+      // バックスラッシュを先にエスケープしてからシングルクォートをエスケープ
+      const escaped = searchQuery.trim().replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       q = `trashed = false and name contains '${escaped}'`;
     }
 
@@ -106,8 +109,9 @@ export async function listDriveFiles(
  * 単一ファイルのメタデータを取得
  */
 export async function getFileMetadata(accessToken: string, fileId: string): Promise<DriveFile> {
+  const safeFileId = assertSafeCloudId(fileId, 'fileId');
   const fields = 'id, name, mimeType, size, thumbnailLink, iconLink, modifiedTime, parents';
-  const url = `https://www.googleapis.com/drive/v3/files/${fileId}?fields=${encodeURIComponent(fields)}`;
+  const url = `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(safeFileId)}?fields=${encodeURIComponent(fields)}`;
 
   const res = await fetch(url, {
     headers: {
